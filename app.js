@@ -17,6 +17,9 @@ class PlankClub {
         this.completedPlanks = [];
         this.pausedTime = 0;
 
+        // Wake lock
+        this.wakeLock = null;
+
         this.init();
     }
 
@@ -106,6 +109,23 @@ class PlankClub {
         document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
         document.getElementById('pauseTimerBtn').addEventListener('click', () => this.pauseTimer());
         document.getElementById('stopTimerBtn').addEventListener('click', () => this.stopTimer());
+
+        // Settings modal event listeners
+        document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
+        document.getElementById('closeModalBtn').addEventListener('click', () => this.closeSettings());
+        document.getElementById('clearStatsBtn').addEventListener('click', () => this.promptClearStats());
+
+        // Confirmation modal event listeners
+        document.getElementById('confirmYesBtn').addEventListener('click', () => this.confirmClearStats());
+        document.getElementById('confirmNoBtn').addEventListener('click', () => this.closeConfirmModal());
+
+        // Close modals when clicking outside
+        document.getElementById('settingsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'settingsModal') this.closeSettings();
+        });
+        document.getElementById('confirmModal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirmModal') this.closeConfirmModal();
+        });
     }
 
     // Check if user has already logged today
@@ -343,7 +363,7 @@ class PlankClub {
     }
 
     // Timer methods
-    startTimer() {
+    async startTimer() {
         const countInput = document.getElementById('timerCount');
         const durationInput = document.getElementById('timerDuration');
         const restInput = document.getElementById('restDuration');
@@ -366,6 +386,9 @@ class PlankClub {
             this.showTimerMessage('❌ Rest must be between 5 and 180 seconds', 'error');
             return;
         }
+
+        // Request wake lock
+        await this.requestWakeLock();
 
         // Initialize timer
         this.currentPlank = 1;
@@ -408,6 +431,9 @@ class PlankClub {
         clearInterval(this.timerInterval);
         this.timerState = 'idle';
 
+        // Release wake lock
+        this.releaseWakeLock();
+
         // Re-enable inputs
         document.getElementById('timerCount').disabled = false;
         document.getElementById('timerDuration').disabled = false;
@@ -443,9 +469,11 @@ class PlankClub {
                     if (this.currentPlank >= this.totalPlanks) {
                         // All planks completed
                         clearInterval(this.timerInterval);
+                        this.releaseWakeLock();
                         this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
                         this.logTimedPlanks();
                         this.stopTimer();
+                        this.offerShare();
                         return;
                     } else {
                         // Start rest period
@@ -545,6 +573,119 @@ class PlankClub {
             // Silently fail if audio is not supported
             console.log('Audio not supported');
         }
+    }
+
+    // Wake Lock methods
+    async requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                this.wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake lock activated');
+
+                // Re-request wake lock if visibility changes
+                this.wakeLock.addEventListener('release', () => {
+                    console.log('Wake lock released');
+                });
+            }
+        } catch (err) {
+            console.log('Wake lock error:', err);
+        }
+    }
+
+    async releaseWakeLock() {
+        if (this.wakeLock) {
+            try {
+                await this.wakeLock.release();
+                this.wakeLock = null;
+                console.log('Wake lock released');
+            } catch (err) {
+                console.log('Wake lock release error:', err);
+            }
+        }
+    }
+
+    // Offer share after timer completion
+    offerShare() {
+        setTimeout(() => {
+            if (confirm('🎉 Great job! Would you like to share your progress?')) {
+                this.shareProgress();
+            }
+        }, 1000);
+    }
+
+    // Settings modal methods
+    openSettings() {
+        document.getElementById('settingsModal').style.display = 'flex';
+    }
+
+    closeSettings() {
+        document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    promptClearStats() {
+        const days = parseInt(document.getElementById('clearDays').value);
+
+        if (isNaN(days) || days < 1 || days > 365) {
+            alert('Please enter a valid number of days (1-365)');
+            return;
+        }
+
+        // Count how many days will be affected
+        let affectedDays = 0;
+        const today = new Date();
+
+        for (let i = 0; i < days; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            if (this.data[dateStr] && this.data[dateStr].length > 0) {
+                affectedDays++;
+            }
+        }
+
+        const message = affectedDays > 0
+            ? `Are you sure you want to clear data from the last ${days} day${days > 1 ? 's' : ''}?\n\nThis will remove plank records from ${affectedDays} day${affectedDays > 1 ? 's' : ''} that have data.\n\nThis action cannot be undone!`
+            : `No plank data found in the last ${days} day${days > 1 ? 's' : ''}.`;
+
+        document.getElementById('confirmMessage').textContent = message;
+
+        if (affectedDays > 0) {
+            document.getElementById('settingsModal').style.display = 'none';
+            document.getElementById('confirmModal').style.display = 'flex';
+        } else {
+            alert(message);
+        }
+    }
+
+    confirmClearStats() {
+        const days = parseInt(document.getElementById('clearDays').value);
+        const today = new Date();
+        let clearedDays = 0;
+
+        for (let i = 0; i < days; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            if (this.data[dateStr]) {
+                delete this.data[dateStr];
+                clearedDays++;
+            }
+        }
+
+        this.saveData();
+        this.closeConfirmModal();
+        this.closeSettings();
+
+        // Refresh UI
+        this.renderProgressGrid();
+        this.updateStats();
+        this.checkTodayStatus();
+
+        alert(`✅ Successfully cleared data from ${clearedDays} day${clearedDays > 1 ? 's' : ''}!`);
+    }
+
+    closeConfirmModal() {
+        document.getElementById('confirmModal').style.display = 'none';
     }
 }
 
