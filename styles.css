@@ -180,6 +180,13 @@ input[type="number"]:focus {
     border: 2px solid #3a3a3c;
 }
 
+.timer-start-time {
+    font-size: 0.9em;
+    color: #818384;
+    margin-bottom: 10px;
+    font-weight: normal;
+}
+
 .timer-status {
     font-size: 1.2em;
     font-weight: bold;
@@ -440,40 +447,51 @@ input[type="number"]:focus {
     flex-wrap: wrap;
 }
 
-.btn-share, .btn-whatsapp {
-    padding: 15px 40px;
-    font-size: 1.2em;
+.btn-whatsapp {
+    padding: 18px 50px;
+    font-size: 1.3em;
     font-weight: bold;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
-    flex: 1;
-    min-width: 200px;
-}
-
-.btn-share {
-    background-color: #3a3a3c;
-}
-
-.btn-share:hover {
-    background-color: #565758;
-}
-
-.btn-share:active {
-    transform: scale(0.98);
-}
-
-.btn-whatsapp {
+    flex: 2;
+    min-width: 250px;
     background-color: #25D366;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
 }
 
 .btn-whatsapp:hover {
     background-color: #20BA5A;
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+    transform: translateY(-2px);
 }
 
 .btn-whatsapp:active {
+    transform: scale(0.98);
+}
+
+.btn-share {
+    padding: 12px 30px;
+    font-size: 0.95em;
+    font-weight: normal;
+    color: #d7dadc;
+    border: 1px solid #3a3a3c;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    min-width: 150px;
+    background-color: transparent;
+}
+
+.btn-share:hover {
+    background-color: #3a3a3c;
+    border-color: #565758;
+}
+
+.btn-share:active {
     transform: scale(0.98);
 }
 
@@ -675,11 +693,18 @@ footer {
         gap: 10px;
     }
 
-    .btn-share, .btn-whatsapp {
+    .btn-whatsapp {
         width: 100%;
         min-width: unset;
-        padding: 18px 30px;
-        font-size: 1.1em;
+        padding: 20px 30px;
+        font-size: 1.2em;
+    }
+
+    .btn-share {
+        width: 100%;
+        min-width: unset;
+        padding: 14px 25px;
+        font-size: 0.9em;
     }
 
     /* Larger touch targets for mobile */
