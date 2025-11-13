@@ -109,13 +109,21 @@ class PlankClub {
 
     // Log today's plank
     logPlank() {
-        const input = document.getElementById('plankTime');
-        const seconds = parseInt(input.value);
+        const timeInput = document.getElementById('plankTime');
+        const countInput = document.getElementById('plankCount');
+        const seconds = parseInt(timeInput.value);
+        const count = parseInt(countInput.value) || 1;
         const statusDiv = document.getElementById('todayStatus');
 
         if (isNaN(seconds) || seconds < 0) {
             statusDiv.className = 'status-message error';
             statusDiv.textContent = '❌ Please enter a valid time in seconds';
+            return;
+        }
+
+        if (count < 1 || count > 99) {
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ Count must be between 1 and 99';
             return;
         }
 
@@ -126,22 +134,28 @@ class PlankClub {
             this.data[today] = [];
         }
 
-        // Add the new plank to the array
-        this.data[today].push(seconds);
+        // Add multiple planks with the same duration
+        for (let i = 0; i < count; i++) {
+            this.data[today].push(seconds);
+        }
         this.saveData();
 
         const plankCount = this.data[today].length;
         const total = this.getTotalSeconds(this.data[today]);
         statusDiv.className = 'status-message success';
-        statusDiv.textContent = `✅ Plank #${plankCount} logged: ${seconds}s (Total today: ${total}s)`;
+        if (count === 1) {
+            statusDiv.textContent = `✅ Plank #${plankCount} logged: ${seconds}s (Total today: ${total}s)`;
+        } else {
+            statusDiv.textContent = `✅ ${count} planks logged: ${count}×${seconds}s (Total today: ${total}s)`;
+        }
 
         // Refresh UI
         this.renderProgressGrid();
         this.updateStats();
         this.checkTodayStatus();
 
-        // Clear input
-        input.value = '';
+        // Clear time input but keep count
+        timeInput.value = '';
 
         // Clear message after 3 seconds
         setTimeout(() => {
