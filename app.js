@@ -16,6 +16,7 @@ class PlankClub {
         this.restDuration = 0;
         this.completedPlanks = [];
         this.pausedTime = 0;
+        this.startTime = null;
 
         // Wake lock
         this.wakeLock = null;
@@ -335,6 +336,9 @@ class PlankClub {
 
         // Add stats
         const currentStreak = this.calculateCurrentStreak();
+        const todayData = this.data[today] || [];
+        const todayPlanks = todayData.length;
+        const todayTotal = this.getTotalSeconds(todayData);
 
         // Count total planks (individual exercises, not days)
         let totalPlanks = 0;
@@ -344,7 +348,12 @@ class PlankClub {
             }
         }
 
-        shareText += `🔥 Streak: ${currentStreak} | Total: ${totalPlanks}\n`;
+        // Show today's stats if available
+        if (todayPlanks > 0) {
+            shareText += `📅 Today: ${todayPlanks} plank${todayPlanks > 1 ? 's' : ''} (${todayTotal}s)\n`;
+        }
+
+        shareText += `🔥 Streak: ${currentStreak} | Total Planks: ${totalPlanks}\n`;
         shareText += '\nJoin me at Plank Club!\nhttps://pcjohn.co.uk';
 
         return shareText;
@@ -410,6 +419,11 @@ class PlankClub {
         this.completedPlanks = [];
         this.timerState = 'plank';
         this.timeRemaining = this.plankDuration;
+        this.startTime = new Date();
+
+        // Display start time
+        const timeStr = this.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        document.getElementById('timerStartTime').textContent = `Started at ${timeStr}`;
 
         // Disable inputs
         countInput.disabled = true;
@@ -445,6 +459,7 @@ class PlankClub {
     stopTimer() {
         clearInterval(this.timerInterval);
         this.timerState = 'idle';
+        this.startTime = null;
 
         // Release wake lock
         this.releaseWakeLock();
@@ -461,6 +476,7 @@ class PlankClub {
         document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
 
         // Reset display
+        document.getElementById('timerStartTime').textContent = '';
         document.getElementById('timerStatus').textContent = 'Ready to start';
         document.getElementById('timerTime').textContent = '00:00';
         document.getElementById('timerProgress').textContent = 'Plank 0 of 0';
