@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plank Club 💪</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💪 Plank Club</h1>
+            <p class="subtitle">Track your daily planks, share your progress</p>
+        </header>
+
+        <main>
+            <!-- Today's Plank Entry -->
+            <section class="today-section">
+                <h2>Today's Plank</h2>
+                <div class="input-group">
+                    <input type="number" id="plankTime" placeholder="Enter seconds" min="0" max="999">
+                    <button id="submitBtn" class="btn-primary">Log Plank</button>
+                </div>
+                <div id="todayStatus" class="status-message"></div>
+            </section>
+
+            <!-- Progress Grid -->
+            <section class="progress-section">
+                <h2>Your Progress</h2>
+                <div id="progressGrid" class="progress-grid"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="block block-empty"></span>
+                        <span>No plank</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-beginner"></span>
+                        <span>&lt; 30s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-intermediate"></span>
+                        <span>30-60s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-advanced"></span>
+                        <span>60s+</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="stats-section">
+                <h2>Stats</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="currentStreak">0</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maxStreak">0</div>
+                        <div class="stat-label">Best Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPlanks">0</div>
+                        <div class="stat-label">Total Planks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bestTime">0s</div>
+                        <div class="stat-label">Best Time</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Share -->
+            <section class="share-section">
+                <button id="shareBtn" class="btn-share">📤 Share Progress</button>
+                <div id="shareMessage" class="share-message"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>All data stored locally in your browser</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
