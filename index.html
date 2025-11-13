@@ -14,17 +14,6 @@
         </header>
 
         <main>
-            <!-- Today's Plank Entry -->
-            <section class="today-section">
-                <h2>Add a Plank</h2>
-                <div class="input-group">
-                    <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999">
-                    <input type="number" id="plankCount" placeholder="Count" min="1" max="99" value="1">
-                    <button id="submitBtn" class="btn-primary">Log Plank</button>
-                </div>
-                <div id="todayStatus" class="status-message"></div>
-            </section>
-
             <!-- Timer Section -->
             <section class="timer-section">
                 <h2>⏱️ Plank Timer</h2>
@@ -55,6 +44,17 @@
                 <div id="timerMessage" class="timer-message"></div>
             </section>
 
+            <!-- Today's Plank Entry -->
+            <section class="today-section">
+                <h2>Add a Plank</h2>
+                <div class="input-group">
+                    <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999">
+                    <input type="number" id="plankCount" placeholder="Count" min="1" max="99" value="1">
+                    <button id="submitBtn" class="btn-primary">Log Plank</button>
+                </div>
+                <div id="todayStatus" class="status-message"></div>
+            </section>
+
             <!-- Progress Grid -->
             <section class="progress-section">
                 <h2>Your Progress</h2>
@@ -81,7 +81,10 @@
 
             <!-- Stats -->
             <section class="stats-section">
-                <h2>Stats</h2>
+                <div class="stats-header">
+                    <h2>Stats</h2>
+                    <button id="settingsBtn" class="btn-settings" title="Settings">⚙️</button>
+                </div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value" id="currentStreak">0</div>
@@ -112,6 +115,36 @@
         <footer>
             <p>All data stored locally in your browser</p>
         </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="settings-option">
+                <h3>Clear Stats</h3>
+                <p class="option-description">Remove plank data from your history</p>
+                <div class="clear-stats-controls">
+                    <label for="clearDays">Clear last:</label>
+                    <input type="number" id="clearDays" min="1" max="365" value="7">
+                    <span>days</span>
+                </div>
+                <button id="clearStatsBtn" class="btn-danger">Clear Data</button>
+            </div>
+            <button id="closeModalBtn" class="btn-secondary">Close</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Confirm Clear Data</h2>
+            <p id="confirmMessage" class="confirm-message"></p>
+            <div class="modal-actions">
+                <button id="confirmYesBtn" class="btn-danger">Yes, Clear Data</button>
+                <button id="confirmNoBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>
