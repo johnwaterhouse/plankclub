@@ -25,6 +25,36 @@
                 <div id="todayStatus" class="status-message"></div>
             </section>
 
+            <!-- Timer Section -->
+            <section class="timer-section">
+                <h2>⏱️ Plank Timer</h2>
+                <div class="timer-setup">
+                    <div class="timer-input-group">
+                        <label for="timerCount">Number of Planks:</label>
+                        <input type="number" id="timerCount" min="1" max="10" value="3">
+                    </div>
+                    <div class="timer-input-group">
+                        <label for="timerDuration">Duration (seconds):</label>
+                        <input type="number" id="timerDuration" min="10" max="600" value="60">
+                    </div>
+                    <div class="timer-input-group">
+                        <label for="restDuration">Rest (seconds):</label>
+                        <input type="number" id="restDuration" min="5" max="180" value="30">
+                    </div>
+                </div>
+                <div class="timer-display">
+                    <div class="timer-status" id="timerStatus">Ready to start</div>
+                    <div class="timer-time" id="timerTime">00:00</div>
+                    <div class="timer-progress" id="timerProgress">Plank 0 of 0</div>
+                </div>
+                <div class="timer-controls">
+                    <button id="startTimerBtn" class="btn-timer btn-start">▶️ Start Timer</button>
+                    <button id="pauseTimerBtn" class="btn-timer btn-pause" style="display: none;">⏸️ Pause</button>
+                    <button id="stopTimerBtn" class="btn-timer btn-stop" style="display: none;">⏹️ Stop</button>
+                </div>
+                <div id="timerMessage" class="timer-message"></div>
+            </section>
+
             <!-- Progress Grid -->
             <section class="progress-section">
                 <h2>Your Progress</h2>
