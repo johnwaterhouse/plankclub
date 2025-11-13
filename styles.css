@@ -163,14 +163,23 @@ input[type="number"]:focus {
 
 .timer-setup {
     display: flex;
-    gap: 15px;
-    margin-bottom: 25px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
 }
 
 .timer-input-group {
     flex: 1;
     min-width: 150px;
+}
+
+.timer-input-full {
+    width: 100%;
+}
+
+.timer-input-row {
+    display: flex;
+    gap: 12px;
 }
 
 .timer-input-group label {
@@ -205,10 +214,10 @@ input[type="number"]:focus {
 
 .timer-display {
     text-align: center;
-    padding: 30px;
+    padding: 20px;
     background-color: var(--bg-primary);
     border-radius: var(--border-radius-large);
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     border: 2px solid var(--bg-tertiary);
 }
 

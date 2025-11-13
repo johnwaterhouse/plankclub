@@ -60,6 +60,7 @@ class PlankClub {
         this.setupEventListeners();
         this.checkTodayStatus();
         this.setupVisibilityListener();
+        this.loadTimerPreferences();
     }
 
     // Load data from localStorage
@@ -132,6 +133,30 @@ class PlankClub {
         if (totalSeconds < CONFIG.BEGINNER_MAX) return '🟨';
         if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
         return '🟢';
+    }
+
+    // Load timer preferences from localStorage
+    loadTimerPreferences() {
+        const prefs = localStorage.getItem('timerPreferences');
+        if (prefs) {
+            try {
+                const { count, duration, rest } = JSON.parse(prefs);
+                document.getElementById('timerCount').value = count || 3;
+                document.getElementById('timerDuration').value = duration || 60;
+                document.getElementById('restDuration').value = rest || 30;
+            } catch (e) {
+                console.log('Could not load timer preferences');
+            }
+        }
+    }
+
+    // Save timer preferences to localStorage
+    saveTimerPreferences(count, duration, rest) {
+        try {
+            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest }));
+        } catch (e) {
+            console.log('Could not save timer preferences');
+        }
     }
 
     // Setup event listeners
@@ -547,6 +572,9 @@ class PlankClub {
         this.totalPlanks = parseInt(countInput.value) || 3;
         this.plankDuration = parseInt(durationInput.value) || 60;
         this.restDuration = parseInt(restInput.value) || 30;
+
+        // Save preferences for next time
+        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration);
 
         if (this.totalPlanks < CONFIG.TIMER_MIN_PLANKS || this.totalPlanks > CONFIG.TIMER_MAX_PLANKS) {
             this.showTimerMessage(`❌ Number of planks must be between ${CONFIG.TIMER_MIN_PLANKS} and ${CONFIG.TIMER_MAX_PLANKS}`, 'error');
