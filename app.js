@@ -104,6 +104,7 @@ class PlankClub {
             if (e.key === 'Enter') this.logPlank();
         });
         document.getElementById('shareBtn').addEventListener('click', () => this.shareProgress());
+        document.getElementById('whatsappBtn').addEventListener('click', () => this.shareToWhatsApp());
 
         // Timer event listeners
         document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
@@ -315,8 +316,8 @@ class PlankClub {
         document.getElementById('bestTime').textContent = `${bestTime}s`;
     }
 
-    // Share progress (Wordle-style)
-    shareProgress() {
+    // Generate share text (Wordle-style)
+    generateShareText() {
         const today = this.getTodayDate();
         const daysToShare = 7; // Share last 7 days
 
@@ -344,7 +345,14 @@ class PlankClub {
         }
 
         shareText += `🔥 Streak: ${currentStreak} | Total: ${totalPlanks}\n`;
-        shareText += '\nJoin me at Plank Club!';
+        shareText += '\nJoin me at Plank Club!\nhttps://pcjohn.co.uk';
+
+        return shareText;
+    }
+
+    // Share progress to clipboard
+    shareProgress() {
+        const shareText = this.generateShareText();
 
         // Copy to clipboard
         navigator.clipboard.writeText(shareText).then(() => {
@@ -360,6 +368,13 @@ class PlankClub {
             console.error('Failed to copy:', err);
             alert('Failed to copy. Here\'s your share text:\n\n' + shareText);
         });
+    }
+
+    // Share to WhatsApp
+    shareToWhatsApp() {
+        const shareText = this.generateShareText();
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        window.open(whatsappUrl, '_blank');
     }
 
     // Timer methods
