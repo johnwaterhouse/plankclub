@@ -5,6 +5,18 @@ class PlankClub {
     constructor() {
         this.storageKey = 'plankClubData';
         this.data = this.loadData();
+
+        // Timer state
+        this.timerInterval = null;
+        this.timerState = 'idle'; // idle, plank, rest, paused
+        this.currentPlank = 0;
+        this.totalPlanks = 0;
+        this.timeRemaining = 0;
+        this.plankDuration = 0;
+        this.restDuration = 0;
+        this.completedPlanks = [];
+        this.pausedTime = 0;
+
         this.init();
     }
 
@@ -89,6 +101,11 @@ class PlankClub {
             if (e.key === 'Enter') this.logPlank();
         });
         document.getElementById('shareBtn').addEventListener('click', () => this.shareProgress());
+
+        // Timer event listeners
+        document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
+        document.getElementById('pauseTimerBtn').addEventListener('click', () => this.pauseTimer());
+        document.getElementById('stopTimerBtn').addEventListener('click', () => this.stopTimer());
     }
 
     // Check if user has already logged today
@@ -323,6 +340,211 @@ class PlankClub {
             console.error('Failed to copy:', err);
             alert('Failed to copy. Here\'s your share text:\n\n' + shareText);
         });
+    }
+
+    // Timer methods
+    startTimer() {
+        const countInput = document.getElementById('timerCount');
+        const durationInput = document.getElementById('timerDuration');
+        const restInput = document.getElementById('restDuration');
+
+        this.totalPlanks = parseInt(countInput.value) || 3;
+        this.plankDuration = parseInt(durationInput.value) || 60;
+        this.restDuration = parseInt(restInput.value) || 30;
+
+        if (this.totalPlanks < 1 || this.totalPlanks > 10) {
+            this.showTimerMessage('❌ Number of planks must be between 1 and 10', 'error');
+            return;
+        }
+
+        if (this.plankDuration < 10 || this.plankDuration > 600) {
+            this.showTimerMessage('❌ Duration must be between 10 and 600 seconds', 'error');
+            return;
+        }
+
+        if (this.restDuration < 5 || this.restDuration > 180) {
+            this.showTimerMessage('❌ Rest must be between 5 and 180 seconds', 'error');
+            return;
+        }
+
+        // Initialize timer
+        this.currentPlank = 1;
+        this.completedPlanks = [];
+        this.timerState = 'plank';
+        this.timeRemaining = this.plankDuration;
+
+        // Disable inputs
+        countInput.disabled = true;
+        durationInput.disabled = true;
+        restInput.disabled = true;
+
+        // Show/hide buttons
+        document.getElementById('startTimerBtn').style.display = 'none';
+        document.getElementById('pauseTimerBtn').style.display = 'inline-block';
+        document.getElementById('stopTimerBtn').style.display = 'inline-block';
+
+        this.updateTimerDisplay();
+        this.runTimer();
+    }
+
+    pauseTimer() {
+        if (this.timerState === 'paused') {
+            // Resume
+            this.timerState = this.pausedTime > 0 ? 'plank' : 'rest';
+            document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
+            this.runTimer();
+        } else {
+            // Pause
+            this.pausedTime = this.timeRemaining;
+            const previousState = this.timerState;
+            this.timerState = 'paused';
+            document.getElementById('pauseTimerBtn').innerHTML = '▶️ Resume';
+            clearInterval(this.timerInterval);
+            this.updateTimerDisplay();
+        }
+    }
+
+    stopTimer() {
+        clearInterval(this.timerInterval);
+        this.timerState = 'idle';
+
+        // Re-enable inputs
+        document.getElementById('timerCount').disabled = false;
+        document.getElementById('timerDuration').disabled = false;
+        document.getElementById('restDuration').disabled = false;
+
+        // Show/hide buttons
+        document.getElementById('startTimerBtn').style.display = 'inline-block';
+        document.getElementById('pauseTimerBtn').style.display = 'none';
+        document.getElementById('stopTimerBtn').style.display = 'none';
+        document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
+
+        // Reset display
+        document.getElementById('timerStatus').textContent = 'Ready to start';
+        document.getElementById('timerTime').textContent = '00:00';
+        document.getElementById('timerProgress').textContent = 'Plank 0 of 0';
+
+        // Log completed planks if any
+        if (this.completedPlanks.length > 0) {
+            this.logTimedPlanks();
+        }
+    }
+
+    runTimer() {
+        this.timerInterval = setInterval(() => {
+            this.timeRemaining--;
+
+            if (this.timeRemaining <= 0) {
+                if (this.timerState === 'plank') {
+                    // Plank completed
+                    this.completedPlanks.push(this.plankDuration);
+                    this.playBeep();
+
+                    if (this.currentPlank >= this.totalPlanks) {
+                        // All planks completed
+                        clearInterval(this.timerInterval);
+                        this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
+                        this.logTimedPlanks();
+                        this.stopTimer();
+                        return;
+                    } else {
+                        // Start rest period
+                        this.timerState = 'rest';
+                        this.timeRemaining = this.restDuration;
+                        this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
+                    }
+                } else if (this.timerState === 'rest') {
+                    // Rest completed, start next plank
+                    this.playBeep();
+                    this.currentPlank++;
+                    this.timerState = 'plank';
+                    this.timeRemaining = this.plankDuration;
+                    this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+                }
+            }
+
+            this.updateTimerDisplay();
+        }, 1000);
+    }
+
+    updateTimerDisplay() {
+        const minutes = Math.floor(this.timeRemaining / 60);
+        const seconds = this.timeRemaining % 60;
+        const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+        document.getElementById('timerTime').textContent = timeStr;
+
+        if (this.timerState === 'plank') {
+            document.getElementById('timerStatus').textContent = `🏋️ PLANK ${this.currentPlank}`;
+            document.getElementById('timerStatus').style.color = '#6aaa64';
+        } else if (this.timerState === 'rest') {
+            document.getElementById('timerStatus').textContent = `😌 REST`;
+            document.getElementById('timerStatus').style.color = '#b59f3b';
+        } else if (this.timerState === 'paused') {
+            document.getElementById('timerStatus').textContent = `⏸️ PAUSED`;
+            document.getElementById('timerStatus').style.color = '#818384';
+        }
+
+        document.getElementById('timerProgress').textContent =
+            `Plank ${this.currentPlank} of ${this.totalPlanks} (${this.completedPlanks.length} completed)`;
+    }
+
+    showTimerMessage(message, type) {
+        const messageDiv = document.getElementById('timerMessage');
+        messageDiv.textContent = message;
+        messageDiv.className = `timer-message ${type}`;
+
+        setTimeout(() => {
+            messageDiv.textContent = '';
+            messageDiv.className = 'timer-message';
+        }, 3000);
+    }
+
+    logTimedPlanks() {
+        const today = this.getTodayDate();
+
+        if (!this.data[today]) {
+            this.data[today] = [];
+        }
+
+        // Add all completed planks
+        this.data[today].push(...this.completedPlanks);
+        this.saveData();
+
+        const total = this.getTotalSeconds(this.data[today]);
+        this.showTimerMessage(`✅ ${this.completedPlanks.length} plank${this.completedPlanks.length > 1 ? 's' : ''} logged! (Total today: ${total}s)`, 'success');
+
+        // Refresh UI
+        this.renderProgressGrid();
+        this.updateStats();
+        this.checkTodayStatus();
+
+        // Reset completed planks
+        this.completedPlanks = [];
+    }
+
+    playBeep() {
+        // Create a simple beep sound using Web Audio API
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            // Silently fail if audio is not supported
+            console.log('Audio not supported');
+        }
     }
 }
 
