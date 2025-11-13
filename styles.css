@@ -408,7 +408,7 @@ input[type="number"]:focus {
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 15px;
 }
 
@@ -418,6 +418,30 @@ input[type="number"]:focus {
     border-radius: 4px;
     text-align: center;
     border: 1px solid #3a3a3c;
+}
+
+.stat-card-beginner {
+    border-color: #b59f3b;
+}
+
+.stat-card-beginner .stat-value {
+    color: #b59f3b;
+}
+
+.stat-card-intermediate {
+    border-color: #538d4e;
+}
+
+.stat-card-intermediate .stat-value {
+    color: #538d4e;
+}
+
+.stat-card-advanced {
+    border-color: #6aaa64;
+}
+
+.stat-card-advanced .stat-value {
+    color: #6aaa64;
 }
 
 .stat-value {
@@ -652,7 +676,7 @@ footer {
     }
 
     .stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .progress-grid {
