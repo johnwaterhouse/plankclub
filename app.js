@@ -42,6 +42,7 @@ class PlankClub {
         this.pausedTime = 0;
         this.startTime = null;
         this.phaseStartTime = null; // Track phase start for accurate timing
+        this.lastMetronomeSecond = null; // Track last metronome tick to prevent duplicates
 
         // Wake lock
         this.wakeLock = null;
@@ -452,6 +453,91 @@ class PlankClub {
         window.open(whatsappUrl, '_blank');
     }
 
+    // Show results page after session ends
+    showResultsPage() {
+        const today = this.getTodayDate();
+        const todayData = this.data[today] || [];
+        const todayTotal = this.getTotalSeconds(todayData);
+        const sessionPlanks = this.completedPlanks.length;
+        const sessionTotal = this.completedPlanks.reduce((sum, s) => sum + s, 0);
+        const currentStreak = this.calculateCurrentStreak();
+
+        // Hide main timer display and show results modal
+        const resultsModal = document.getElementById('resultsModal');
+        if (!resultsModal) {
+            // Create results modal if it doesn't exist
+            this.createResultsModal();
+        }
+
+        // Populate results
+        document.getElementById('resultsSessionPlanks').textContent = sessionPlanks;
+        document.getElementById('resultsSessionTotal').textContent = sessionTotal;
+        document.getElementById('resultsTodayTotal').textContent = todayTotal;
+        document.getElementById('resultsCurrentStreak').textContent = currentStreak;
+
+        // Show modal
+        document.getElementById('resultsModal').style.display = 'flex';
+    }
+
+    // Create results modal HTML
+    createResultsModal() {
+        const modal = document.createElement('div');
+        modal.id = 'resultsModal';
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        modal.innerHTML = `
+            <div class="modal-content results-modal">
+                <div class="results-header">
+                    <h2>🎉 Session Complete!</h2>
+                </div>
+                <div class="results-stats">
+                    <div class="result-stat">
+                        <div class="result-label">Planks Done</div>
+                        <div class="result-value" id="resultsSessionPlanks">0</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-label">Session Time</div>
+                        <div class="result-value" id="resultsSessionTotal">0</div>
+                        <div class="result-unit">seconds</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-label">Today's Total</div>
+                        <div class="result-value" id="resultsTodayTotal">0</div>
+                        <div class="result-unit">seconds</div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="result-label">Current Streak</div>
+                        <div class="result-value" id="resultsCurrentStreak">0</div>
+                        <div class="result-unit">days</div>
+                    </div>
+                </div>
+                <div class="results-buttons">
+                    <button id="resultsShareWhatsapp" class="btn-whatsapp">💬 Share to WhatsApp</button>
+                    <button id="resultsShareClipboard" class="btn-share">📋 Copy to Clipboard</button>
+                    <button id="resultsClose" class="btn-secondary">✓ Done</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Add event listeners
+        document.getElementById('resultsShareWhatsapp').addEventListener('click', () => this.shareToWhatsApp());
+        document.getElementById('resultsShareClipboard').addEventListener('click', () => this.shareProgress());
+        document.getElementById('resultsClose').addEventListener('click', () => this.closeResultsPage());
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'resultsModal') this.closeResultsPage();
+        });
+    }
+
+    closeResultsPage() {
+        const modal = document.getElementById('resultsModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
     // Timer methods
     async startTimer() {
         const countInput = document.getElementById('timerCount');
@@ -487,6 +573,7 @@ class PlankClub {
         this.timeRemaining = this.plankDuration;
         this.startTime = new Date();
         this.phaseStartTime = Date.now();
+        this.lastMetronomeSecond = null;
 
         // Display start time
         const timeStr = this.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -565,6 +652,14 @@ class PlankClub {
             const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
             this.timeRemaining = Math.max(0, phaseDuration - elapsed);
 
+            // Play metronome tick in last 5 seconds of any phase (only once per second)
+            if (this.timeRemaining > 0 && this.timeRemaining <= 5) {
+                if (this.lastMetronomeSecond !== this.timeRemaining) {
+                    this.playMetronomeTick();
+                    this.lastMetronomeSecond = this.timeRemaining;
+                }
+            }
+
             if (this.timeRemaining <= 0) {
                 if (this.timerState === 'plank') {
                     // Plank completed
@@ -576,7 +671,7 @@ class PlankClub {
                         this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
                         this.logTimedPlanks();
                         this.stopTimer(); // stopTimer handles cleanup (interval, wake lock, etc.)
-                        this.offerShare();
+                        this.showResultsPage();
                         return;
                     } else {
                         // Start rest period
@@ -678,6 +773,37 @@ class PlankClub {
 
             oscillator.start(this.audioContext.currentTime);
             oscillator.stop(this.audioContext.currentTime + CONFIG.BEEP_DURATION);
+        } catch (e) {
+            // Silently fail if audio is not supported
+            console.log('Audio not supported');
+        }
+    }
+
+    playMetronomeTick() {
+        // Play a higher-pitched tick sound for the last 5 seconds countdown
+        try {
+            // Create shared audio context on first use
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            // Higher frequency (1200Hz) for metronome tick
+            oscillator.frequency.value = 1200;
+            oscillator.type = 'sine';
+
+            // Shorter duration (0.1s) and lower volume (0.2) for tick
+            const tickDuration = 0.1;
+            gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + tickDuration);
+
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + tickDuration);
         } catch (e) {
             // Silently fail if audio is not supported
             console.log('Audio not supported');
