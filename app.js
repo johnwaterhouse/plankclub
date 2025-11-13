@@ -298,23 +298,33 @@ class PlankClub {
         const currentStreak = this.calculateCurrentStreak();
         const maxStreak = this.calculateMaxStreak();
 
-        // Count total number of individual planks (not days)
+        // Count total number of individual planks by category
         let totalPlanks = 0;
-        let bestTime = 0;
+        let beginnerCount = 0;
+        let intermediateCount = 0;
+        let advancedCount = 0;
 
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
                 totalPlanks += dateData.length;
                 for (const seconds of dateData) {
-                    bestTime = Math.max(bestTime, seconds);
+                    if (seconds < 30) {
+                        beginnerCount++;
+                    } else if (seconds < 60) {
+                        intermediateCount++;
+                    } else {
+                        advancedCount++;
+                    }
                 }
             }
         }
 
         document.getElementById('currentStreak').textContent = currentStreak;
         document.getElementById('maxStreak').textContent = maxStreak;
+        document.getElementById('beginnerCount').textContent = beginnerCount;
+        document.getElementById('intermediateCount').textContent = intermediateCount;
+        document.getElementById('advancedCount').textContent = advancedCount;
         document.getElementById('totalPlanks').textContent = totalPlanks;
-        document.getElementById('bestTime').textContent = `${bestTime}s`;
     }
 
     // Generate share text (Wordle-style)
@@ -638,8 +648,8 @@ class PlankClub {
     // Offer share after timer completion
     offerShare() {
         setTimeout(() => {
-            if (confirm('🎉 Great job! Would you like to share your progress?')) {
-                this.shareProgress();
+            if (confirm('🎉 Great job! Would you like to share your progress on WhatsApp?')) {
+                this.shareToWhatsApp();
             }
         }, 1000);
     }
