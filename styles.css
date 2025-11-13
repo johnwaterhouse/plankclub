@@ -69,6 +69,10 @@ input[type="number"] {
     transition: border-color 0.2s;
 }
 
+#plankCount {
+    flex: 0 0 100px;
+}
+
 input[type="number"]:focus {
     outline: none;
     border-color: #538d4e;

@@ -20,7 +20,14 @@ class PlankClub {
     loadData() {
         const stored = localStorage.getItem(this.storageKey);
         if (stored) {
-            return JSON.parse(stored);
+            const data = JSON.parse(stored);
+            // Migrate old format (single number) to new format (array)
+            for (const date in data) {
+                if (typeof data[date] === 'number') {
+                    data[date] = [data[date]];
+                }
+            }
+            return data;
         }
         return {};
     }
@@ -51,19 +58,27 @@ class PlankClub {
         return `${month} ${day}`;
     }
 
+    // Get total seconds for a date (sum of all planks)
+    getTotalSeconds(dateData) {
+        if (!dateData || !Array.isArray(dateData)) return 0;
+        return dateData.reduce((sum, seconds) => sum + seconds, 0);
+    }
+
     // Get block class based on plank time
-    getBlockClass(seconds) {
-        if (!seconds || seconds === 0) return 'block-empty';
-        if (seconds < 30) return 'block-beginner';
-        if (seconds < 60) return 'block-intermediate';
+    getBlockClass(dateData) {
+        const totalSeconds = this.getTotalSeconds(dateData);
+        if (totalSeconds === 0) return 'block-empty';
+        if (totalSeconds < 30) return 'block-beginner';
+        if (totalSeconds < 60) return 'block-intermediate';
         return 'block-advanced';
     }
 
     // Get emoji for sharing based on plank time
-    getBlockEmoji(seconds) {
-        if (!seconds || seconds === 0) return '⬜';
-        if (seconds < 30) return '🟨';
-        if (seconds < 60) return '🟩';
+    getBlockEmoji(dateData) {
+        const totalSeconds = this.getTotalSeconds(dateData);
+        if (totalSeconds === 0) return '⬜';
+        if (totalSeconds < 30) return '🟨';
+        if (totalSeconds < 60) return '🟩';
         return '🟢';
     }
 
@@ -83,17 +98,21 @@ class PlankClub {
         const statusDiv = document.getElementById('todayStatus');
         const input = document.getElementById('plankTime');
 
-        if (todayData) {
+        if (todayData && todayData.length > 0) {
+            const planksList = todayData.map((s, i) => `#${i + 1}: ${s}s`).join(', ');
+            const total = this.getTotalSeconds(todayData);
             statusDiv.className = 'status-message success';
-            statusDiv.textContent = `✅ Today's plank logged: ${todayData}s`;
-            input.value = todayData;
+            statusDiv.textContent = `✅ Today's planks: ${planksList} (Total: ${total}s)`;
+            input.value = todayData[todayData.length - 1];
         }
     }
 
     // Log today's plank
     logPlank() {
-        const input = document.getElementById('plankTime');
-        const seconds = parseInt(input.value);
+        const timeInput = document.getElementById('plankTime');
+        const countInput = document.getElementById('plankCount');
+        const seconds = parseInt(timeInput.value);
+        const count = parseInt(countInput.value) || 1;
         const statusDiv = document.getElementById('todayStatus');
 
         if (isNaN(seconds) || seconds < 0) {
@@ -102,21 +121,45 @@ class PlankClub {
             return;
         }
 
+        if (count < 1 || count > 99) {
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ Count must be between 1 and 99';
+            return;
+        }
+
         const today = this.getTodayDate();
-        this.data[today] = seconds;
+
+        // Initialize array if it doesn't exist
+        if (!this.data[today]) {
+            this.data[today] = [];
+        }
+
+        // Add multiple planks with the same duration
+        for (let i = 0; i < count; i++) {
+            this.data[today].push(seconds);
+        }
         this.saveData();
 
+        const plankCount = this.data[today].length;
+        const total = this.getTotalSeconds(this.data[today]);
         statusDiv.className = 'status-message success';
-        statusDiv.textContent = `✅ Plank logged: ${seconds}s`;
+        if (count === 1) {
+            statusDiv.textContent = `✅ Plank #${plankCount} logged: ${seconds}s (Total today: ${total}s)`;
+        } else {
+            statusDiv.textContent = `✅ ${count} planks logged: ${count}×${seconds}s (Total today: ${total}s)`;
+        }
 
         // Refresh UI
         this.renderProgressGrid();
         this.updateStats();
+        this.checkTodayStatus();
+
+        // Clear time input but keep count
+        timeInput.value = '';
 
         // Clear message after 3 seconds
         setTimeout(() => {
-            statusDiv.textContent = '';
-            statusDiv.className = 'status-message';
+            this.checkTodayStatus();
         }, 3000);
     }
 
@@ -130,8 +173,8 @@ class PlankClub {
 
         for (let i = daysToShow - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
-            const seconds = this.data[date] || 0;
-            const blockClass = this.getBlockClass(seconds);
+            const dateData = this.data[date] || [];
+            const blockClass = this.getBlockClass(dateData);
 
             const block = document.createElement('div');
             block.className = `block ${blockClass}`;
@@ -142,12 +185,17 @@ class PlankClub {
 
             // Add tooltip with date and time
             const displayDate = this.formatDateDisplay(date);
-            const timeText = seconds ? `${seconds}s` : 'No plank';
+            const totalSeconds = this.getTotalSeconds(dateData);
+            let timeText = 'No plank';
+            if (dateData.length > 0) {
+                const planksList = dateData.map((s, i) => `#${i + 1}: ${s}s`).join(', ');
+                timeText = `${dateData.length} plank${dateData.length > 1 ? 's' : ''} (${planksList}) - Total: ${totalSeconds}s`;
+            }
             block.title = `${displayDate}: ${timeText}`;
 
-            // Show seconds in the block
-            if (seconds > 0) {
-                block.textContent = seconds;
+            // Show total seconds in the block
+            if (totalSeconds > 0) {
+                block.textContent = totalSeconds;
             }
 
             grid.appendChild(block);
@@ -161,7 +209,8 @@ class PlankClub {
 
         while (true) {
             const dateStr = date.toISOString().split('T')[0];
-            if (this.data[dateStr] && this.data[dateStr] > 0) {
+            const dateData = this.data[dateStr];
+            if (dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0) {
                 streak++;
                 date.setDate(date.getDate() - 1);
             } else {
@@ -182,7 +231,8 @@ class PlankClub {
         let prevDate = null;
 
         for (const dateStr of dates) {
-            if (this.data[dateStr] > 0) {
+            const dateData = this.data[dateStr];
+            if (dateData && Array.isArray(dateData) && this.getTotalSeconds(dateData) > 0) {
                 if (prevDate === null) {
                     currentStreak = 1;
                 } else {
@@ -208,8 +258,19 @@ class PlankClub {
     updateStats() {
         const currentStreak = this.calculateCurrentStreak();
         const maxStreak = this.calculateMaxStreak();
-        const totalPlanks = Object.values(this.data).filter(v => v > 0).length;
-        const bestTime = Math.max(...Object.values(this.data), 0);
+
+        // Count total number of individual planks (not days)
+        let totalPlanks = 0;
+        let bestTime = 0;
+
+        for (const dateData of Object.values(this.data)) {
+            if (Array.isArray(dateData)) {
+                totalPlanks += dateData.length;
+                for (const seconds of dateData) {
+                    bestTime = Math.max(bestTime, seconds);
+                }
+            }
+        }
 
         document.getElementById('currentStreak').textContent = currentStreak;
         document.getElementById('maxStreak').textContent = maxStreak;
@@ -227,8 +288,8 @@ class PlankClub {
         // Add grid
         for (let i = daysToShare - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
-            const seconds = this.data[date] || 0;
-            const emoji = this.getBlockEmoji(seconds);
+            const dateData = this.data[date] || [];
+            const emoji = this.getBlockEmoji(dateData);
             shareText += emoji;
         }
 
@@ -236,7 +297,14 @@ class PlankClub {
 
         // Add stats
         const currentStreak = this.calculateCurrentStreak();
-        const totalPlanks = Object.values(this.data).filter(v => v > 0).length;
+
+        // Count total planks (individual exercises, not days)
+        let totalPlanks = 0;
+        for (const dateData of Object.values(this.data)) {
+            if (Array.isArray(dateData)) {
+                totalPlanks += dateData.length;
+            }
+        }
 
         shareText += `🔥 Streak: ${currentStreak} | Total: ${totalPlanks}\n`;
         shareText += '\nJoin me at Plank Club!';
