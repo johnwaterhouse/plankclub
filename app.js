@@ -332,7 +332,14 @@ class PlankClub {
         const today = this.getTodayDate();
         const daysToShare = 7; // Share last 7 days
 
-        let shareText = '💪 Plank Club\n\n';
+        // Get date range for display
+        const startDate = this.getDateDaysAgo(daysToShare - 1);
+        const endDate = this.getDateDaysAgo(0);
+        const startDisplay = this.formatDateDisplay(startDate);
+        const endDisplay = this.formatDateDisplay(endDate);
+
+        let shareText = '💪 Plank Club\n';
+        shareText += `${startDisplay} - ${endDisplay}\n\n`;
 
         // Add grid
         for (let i = daysToShare - 1; i >= 0; i--) {
