@@ -1,6 +1,29 @@
 // Plank Club - Exercise Tracking App
 // All data stored in localStorage
 
+// Configuration constants
+const CONFIG = {
+    DISPLAY_DAYS: 28,           // Days to show in progress grid
+    SHARE_DAYS: 7,              // Days to include in share text
+    BEGINNER_MAX: 30,           // Max seconds for beginner level
+    INTERMEDIATE_MAX: 60,       // Max seconds for intermediate level
+    TIMER_MIN_PLANKS: 1,        // Min number of planks in timer
+    TIMER_MAX_PLANKS: 10,       // Max number of planks in timer
+    PLANK_MIN_DURATION: 10,     // Min plank duration in seconds
+    PLANK_MAX_DURATION: 600,    // Max plank duration in seconds
+    REST_MIN_DURATION: 5,       // Min rest duration in seconds
+    REST_MAX_DURATION: 180,     // Max rest duration in seconds
+    MANUAL_MIN_COUNT: 1,        // Min plank count for manual logging
+    MANUAL_MAX_COUNT: 99,       // Max plank count for manual logging
+    CLEAR_MIN_DAYS: 1,          // Min days for clear stats
+    CLEAR_MAX_DAYS: 365,        // Max days for clear stats
+    BEEP_FREQUENCY: 800,        // Beep sound frequency in Hz
+    BEEP_DURATION: 0.5,         // Beep duration in seconds
+    BEEP_VOLUME: 0.3,           // Beep volume (0-1)
+    MESSAGE_TIMEOUT: 3000,      // Status message timeout in ms
+    SHARE_DELAY: 1000           // Delay before share prompt in ms
+};
+
 class PlankClub {
     constructor() {
         this.storageKey = 'plankClubData';
@@ -18,6 +41,7 @@ class PlankClub {
         this.completedPlanks = [];
         this.pausedTime = 0;
         this.startTime = null;
+        this.phaseStartTime = null; // Track phase start for accurate timing
 
         // Wake lock
         this.wakeLock = null;
@@ -34,6 +58,7 @@ class PlankClub {
         this.updateStats();
         this.setupEventListeners();
         this.checkTodayStatus();
+        this.setupVisibilityListener();
     }
 
     // Load data from localStorage
@@ -94,8 +119,8 @@ class PlankClub {
     getBlockClass(dateData) {
         const totalSeconds = this.getTotalSeconds(dateData);
         if (totalSeconds === 0) return 'block-empty';
-        if (totalSeconds < 30) return 'block-beginner';
-        if (totalSeconds < 60) return 'block-intermediate';
+        if (totalSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
+        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
         return 'block-advanced';
     }
 
@@ -103,8 +128,8 @@ class PlankClub {
     getBlockEmoji(dateData) {
         const totalSeconds = this.getTotalSeconds(dateData);
         if (totalSeconds === 0) return '⬜';
-        if (totalSeconds < 30) return '🟨';
-        if (totalSeconds < 60) return '🟩';
+        if (totalSeconds < CONFIG.BEGINNER_MAX) return '🟨';
+        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
         return '🟢';
     }
 
@@ -138,6 +163,20 @@ class PlankClub {
         document.getElementById('confirmModal').addEventListener('click', (e) => {
             if (e.target.id === 'confirmModal') this.closeConfirmModal();
         });
+
+        // Close modals with ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const settingsModal = document.getElementById('settingsModal');
+                const confirmModal = document.getElementById('confirmModal');
+
+                if (confirmModal.style.display === 'flex') {
+                    this.closeConfirmModal();
+                } else if (settingsModal.style.display === 'flex') {
+                    this.closeSettings();
+                }
+            }
+        });
     }
 
     // Check if user has already logged today
@@ -170,9 +209,9 @@ class PlankClub {
             return;
         }
 
-        if (count < 1 || count > 99) {
+        if (count < CONFIG.MANUAL_MIN_COUNT || count > CONFIG.MANUAL_MAX_COUNT) {
             statusDiv.className = 'status-message error';
-            statusDiv.textContent = '❌ Count must be between 1 and 99';
+            statusDiv.textContent = `❌ Count must be between ${CONFIG.MANUAL_MIN_COUNT} and ${CONFIG.MANUAL_MAX_COUNT}`;
             return;
         }
 
@@ -206,10 +245,10 @@ class PlankClub {
         // Clear time input but keep count
         timeInput.value = '';
 
-        // Clear message after 3 seconds
+        // Clear message after timeout
         setTimeout(() => {
             this.checkTodayStatus();
-        }, 3000);
+        }, CONFIG.MESSAGE_TIMEOUT);
     }
 
     // Render the progress grid
@@ -218,7 +257,7 @@ class PlankClub {
         grid.innerHTML = '';
 
         const today = this.getTodayDate();
-        const daysToShow = 28; // 4 weeks
+        const daysToShow = CONFIG.DISPLAY_DAYS;
 
         for (let i = daysToShow - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
@@ -318,9 +357,9 @@ class PlankClub {
             if (Array.isArray(dateData)) {
                 totalPlanks += dateData.length;
                 for (const seconds of dateData) {
-                    if (seconds < 30) {
+                    if (seconds < CONFIG.BEGINNER_MAX) {
                         beginnerCount++;
-                    } else if (seconds < 60) {
+                    } else if (seconds < CONFIG.INTERMEDIATE_MAX) {
                         intermediateCount++;
                     } else {
                         advancedCount++;
@@ -340,7 +379,7 @@ class PlankClub {
     // Generate share text (Wordle-style)
     generateShareText() {
         const today = this.getTodayDate();
-        const daysToShare = 7; // Share last 7 days
+        const daysToShare = CONFIG.SHARE_DAYS;
 
         // Get date range for display
         const startDate = this.getDateDaysAgo(daysToShare - 1);
@@ -399,7 +438,7 @@ class PlankClub {
             setTimeout(() => {
                 message.textContent = '';
                 message.className = 'share-message';
-            }, 3000);
+            }, CONFIG.MESSAGE_TIMEOUT);
         }).catch(err => {
             console.error('Failed to copy:', err);
             alert('Failed to copy. Here\'s your share text:\n\n' + shareText);
@@ -423,18 +462,18 @@ class PlankClub {
         this.plankDuration = parseInt(durationInput.value) || 60;
         this.restDuration = parseInt(restInput.value) || 30;
 
-        if (this.totalPlanks < 1 || this.totalPlanks > 10) {
-            this.showTimerMessage('❌ Number of planks must be between 1 and 10', 'error');
+        if (this.totalPlanks < CONFIG.TIMER_MIN_PLANKS || this.totalPlanks > CONFIG.TIMER_MAX_PLANKS) {
+            this.showTimerMessage(`❌ Number of planks must be between ${CONFIG.TIMER_MIN_PLANKS} and ${CONFIG.TIMER_MAX_PLANKS}`, 'error');
             return;
         }
 
-        if (this.plankDuration < 10 || this.plankDuration > 600) {
-            this.showTimerMessage('❌ Duration must be between 10 and 600 seconds', 'error');
+        if (this.plankDuration < CONFIG.PLANK_MIN_DURATION || this.plankDuration > CONFIG.PLANK_MAX_DURATION) {
+            this.showTimerMessage(`❌ Duration must be between ${CONFIG.PLANK_MIN_DURATION} and ${CONFIG.PLANK_MAX_DURATION} seconds`, 'error');
             return;
         }
 
-        if (this.restDuration < 5 || this.restDuration > 180) {
-            this.showTimerMessage('❌ Rest must be between 5 and 180 seconds', 'error');
+        if (this.restDuration < CONFIG.REST_MIN_DURATION || this.restDuration > CONFIG.REST_MAX_DURATION) {
+            this.showTimerMessage(`❌ Rest must be between ${CONFIG.REST_MIN_DURATION} and ${CONFIG.REST_MAX_DURATION} seconds`, 'error');
             return;
         }
 
@@ -447,6 +486,7 @@ class PlankClub {
         this.timerState = 'plank';
         this.timeRemaining = this.plankDuration;
         this.startTime = new Date();
+        this.phaseStartTime = Date.now();
 
         // Display start time
         const timeStr = this.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -471,11 +511,14 @@ class PlankClub {
             // Resume
             this.timerState = this.previousTimerState || 'plank';
             this.previousTimerState = null;
+            this.phaseStartTime = Date.now(); // Reset phase start time
             document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
             this.runTimer();
         } else {
-            // Pause
-            this.pausedTime = this.timeRemaining;
+            // Pause - calculate remaining time based on elapsed time
+            const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
+            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
             this.previousTimerState = this.timerState;
             this.timerState = 'paused';
             document.getElementById('pauseTimerBtn').innerHTML = '▶️ Resume';
@@ -517,7 +560,10 @@ class PlankClub {
 
     runTimer() {
         this.timerInterval = setInterval(() => {
-            this.timeRemaining--;
+            // Calculate time remaining based on elapsed time (prevents drift)
+            const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
+            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
 
             if (this.timeRemaining <= 0) {
                 if (this.timerState === 'plank') {
@@ -527,16 +573,15 @@ class PlankClub {
 
                     if (this.currentPlank >= this.totalPlanks) {
                         // All planks completed
-                        clearInterval(this.timerInterval);
-                        this.releaseWakeLock();
                         this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
                         this.logTimedPlanks();
-                        this.stopTimer();
+                        this.stopTimer(); // stopTimer handles cleanup (interval, wake lock, etc.)
                         this.offerShare();
                         return;
                     } else {
                         // Start rest period
                         this.timerState = 'rest';
+                        this.phaseStartTime = Date.now();
                         this.timeRemaining = this.restDuration;
                         this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
                     }
@@ -545,6 +590,7 @@ class PlankClub {
                     this.playBeep();
                     this.currentPlank++;
                     this.timerState = 'plank';
+                    this.phaseStartTime = Date.now();
                     this.timeRemaining = this.plankDuration;
                     this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
                 }
@@ -584,7 +630,7 @@ class PlankClub {
         setTimeout(() => {
             messageDiv.textContent = '';
             messageDiv.className = 'timer-message';
-        }, 3000);
+        }, CONFIG.MESSAGE_TIMEOUT);
     }
 
     logTimedPlanks() {
@@ -624,14 +670,14 @@ class PlankClub {
             oscillator.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
 
-            oscillator.frequency.value = 800;
+            oscillator.frequency.value = CONFIG.BEEP_FREQUENCY;
             oscillator.type = 'sine';
 
-            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+            gainNode.gain.setValueAtTime(CONFIG.BEEP_VOLUME, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + CONFIG.BEEP_DURATION);
 
             oscillator.start(this.audioContext.currentTime);
-            oscillator.stop(this.audioContext.currentTime + 0.5);
+            oscillator.stop(this.audioContext.currentTime + CONFIG.BEEP_DURATION);
         } catch (e) {
             // Silently fail if audio is not supported
             console.log('Audio not supported');
@@ -667,13 +713,23 @@ class PlankClub {
         }
     }
 
+    // Setup visibility change listener to re-request wake lock
+    setupVisibilityListener() {
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && this.timerState !== 'idle' && this.timerState !== 'paused') {
+                // Re-request wake lock when user returns to page and timer is running
+                await this.requestWakeLock();
+            }
+        });
+    }
+
     // Offer share after timer completion
     offerShare() {
         setTimeout(() => {
             if (confirm('🎉 Great job! Would you like to share your progress on WhatsApp?')) {
                 this.shareToWhatsApp();
             }
-        }, 1000);
+        }, CONFIG.SHARE_DELAY);
     }
 
     // Settings modal methods
@@ -688,8 +744,8 @@ class PlankClub {
     promptClearStats() {
         const days = parseInt(document.getElementById('clearDays').value);
 
-        if (isNaN(days) || days < 1 || days > 365) {
-            alert('Please enter a valid number of days (1-365)');
+        if (isNaN(days) || days < CONFIG.CLEAR_MIN_DAYS || days > CONFIG.CLEAR_MAX_DAYS) {
+            alert(`Please enter a valid number of days (${CONFIG.CLEAR_MIN_DAYS}-${CONFIG.CLEAR_MAX_DAYS})`);
             return;
         }
 
