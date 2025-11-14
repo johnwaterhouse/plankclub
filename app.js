@@ -61,6 +61,13 @@ class PlankClub {
         this.checkTodayStatus();
         this.setupVisibilityListener();
         this.loadTimerPreferences();
+        this.setView('setup'); // Start in setup view
+    }
+
+    // Set the current view (setup or timer-active)
+    setView(view) {
+        const container = document.querySelector('.container');
+        container.setAttribute('data-view', view);
     }
 
     // Load data from localStorage
@@ -109,6 +116,33 @@ class PlankClub {
         const month = date.toLocaleDateString('en-US', { month: 'short' });
         const day = date.getDate();
         return `${month} ${day}`;
+    }
+
+    // Get ISO week number for a date
+    getISOWeek(date) {
+        // Create a copy of the date to avoid modifying the original
+        const d = new Date(date.getTime());
+
+        // Set to nearest Thursday: current date + 4 - current day number
+        // Make Sunday's day number 7
+        const dayNum = d.getDay() || 7;
+        d.setDate(d.getDate() + 4 - dayNum);
+
+        // Get first day of year
+        const yearStart = new Date(d.getFullYear(), 0, 1);
+
+        // Calculate full weeks to nearest Thursday
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+
+        return weekNo;
+    }
+
+    // Get ISO week year (may differ from calendar year for dates near year boundary)
+    getISOWeekYear(date) {
+        const d = new Date(date.getTime());
+        const dayNum = d.getDay() || 7;
+        d.setDate(d.getDate() + 4 - dayNum);
+        return d.getFullYear();
     }
 
     // Get total seconds for a date (sum of all planks)
@@ -407,14 +441,13 @@ class PlankClub {
         const today = this.getTodayDate();
         const daysToShare = CONFIG.SHARE_DAYS;
 
-        // Get date range for display
-        const startDate = this.getDateDaysAgo(daysToShare - 1);
-        const endDate = this.getDateDaysAgo(0);
-        const startDisplay = this.formatDateDisplay(startDate);
-        const endDisplay = this.formatDateDisplay(endDate);
+        // Get ISO week number for today
+        const todayDate = new Date();
+        const weekNumber = this.getISOWeek(todayDate);
+        const weekYear = this.getISOWeekYear(todayDate);
 
         let shareText = '💪 Plank Club\n';
-        shareText += `${startDisplay} - ${endDisplay}\n\n`;
+        shareText += `Week ${weekNumber} ${weekYear}\n\n`;
 
         // Add grid
         for (let i = daysToShare - 1; i >= 0; i--) {
@@ -617,6 +650,9 @@ class PlankClub {
         document.getElementById('pauseTimerBtn').style.display = 'inline-block';
         document.getElementById('stopTimerBtn').style.display = 'inline-block';
 
+        // Switch to timer-active view
+        this.setView('timer-active');
+
         this.updateTimerDisplay();
         this.runTimer();
     }
@@ -666,6 +702,9 @@ class PlankClub {
         document.getElementById('timerStatus').textContent = 'Ready to start';
         document.getElementById('timerTime').textContent = '00:00';
         document.getElementById('timerProgress').textContent = 'Plank 0 of 0';
+
+        // Switch back to setup view
+        this.setView('setup');
 
         // Log completed planks if any
         if (this.completedPlanks.length > 0) {

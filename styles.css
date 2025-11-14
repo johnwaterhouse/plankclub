@@ -783,6 +783,46 @@ footer {
     width: 100%;
 }
 
+/* View State Management */
+/* Hide sections when timer is active */
+[data-view="timer-active"] .hide-on-timer-active {
+    display: none !important;
+}
+
+/* Center and enlarge timer when active */
+[data-view="timer-active"] .timer-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 40px 25px;
+}
+
+[data-view="timer-active"] .timer-display {
+    margin: 40px 0;
+}
+
+[data-view="timer-active"] .timer-time {
+    font-size: 6em;
+}
+
+[data-view="timer-active"] .timer-status {
+    font-size: 2em;
+}
+
+[data-view="timer-active"] .timer-progress {
+    font-size: 1.3em;
+}
+
+[data-view="timer-active"] .timer-start-time {
+    font-size: 1.1em;
+}
+
+[data-view="timer-active"] .timer-controls {
+    margin-top: 30px;
+}
+
 /* Responsive Design */
 @media (max-width: 500px) {
     h1 {
@@ -864,5 +904,23 @@ footer {
     /* Adjust input sizes for mobile */
     input[type="number"] {
         font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Timer-active view adjustments for mobile */
+    [data-view="timer-active"] .timer-time {
+        font-size: 4em;
+    }
+
+    [data-view="timer-active"] .timer-status {
+        font-size: 1.5em;
+    }
+
+    [data-view="timer-active"] .timer-progress {
+        font-size: 1.1em;
+    }
+
+    [data-view="timer-active"] .timer-section {
+        min-height: 50vh;
+        padding: 30px 15px;
     }
 }
