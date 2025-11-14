@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container" data-view="setup">
         <header>
             <h1>💪 Plank Club</h1>
             <p class="subtitle">Track your daily planks, share your progress</p>
@@ -20,8 +20,8 @@
         <main>
             <!-- Timer Section -->
             <section class="timer-section">
-                <h2>⏱️ Plank Timer</h2>
-                <div class="timer-setup">
+                <h2 class="hide-on-timer-active">⏱️ Plank Timer</h2>
+                <div class="timer-setup hide-on-timer-active">
                     <div class="timer-input-group timer-input-full">
                         <label for="timerCount">Number of Planks:</label>
                         <input type="number" id="timerCount" min="1" max="10" value="3">
@@ -52,7 +52,7 @@
             </section>
 
             <!-- Today's Plank Entry -->
-            <section class="today-section">
+            <section class="today-section hide-on-timer-active">
                 <h2>Add a Plank</h2>
                 <div class="input-group">
                     <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999">
@@ -63,7 +63,7 @@
             </section>
 
             <!-- Progress Grid -->
-            <section class="progress-section">
+            <section class="progress-section hide-on-timer-active">
                 <h2>Your Progress</h2>
                 <div id="progressGrid" class="progress-grid"></div>
                 <div class="legend">
@@ -87,7 +87,7 @@
             </section>
 
             <!-- Stats -->
-            <section class="stats-section">
+            <section class="stats-section hide-on-timer-active">
                 <div class="stats-header">
                     <h2>Stats</h2>
                     <button id="settingsBtn" class="btn-settings" title="Settings">⚙️</button>
@@ -121,7 +121,7 @@
             </section>
 
             <!-- Share -->
-            <section class="share-section">
+            <section class="share-section hide-on-timer-active">
                 <div class="share-buttons">
                     <button id="whatsappBtn" class="btn-whatsapp">💬 Share to WhatsApp</button>
                     <button id="shareBtn" class="btn-share">📋 Copy to Clipboard</button>
