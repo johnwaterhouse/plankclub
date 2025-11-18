@@ -472,10 +472,37 @@ class PlankClub {
     }
 
     // Share to WhatsApp
-    shareToWhatsApp() {
+    async shareToWhatsApp() {
         const shareText = this.generateShareText();
+
+        // Prefer Web Share API when available (more standard on mobile/secure contexts)
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Plank Club',
+                    text: shareText,
+                    url: 'https://pcjohn.co.uk' // optional
+                });
+                return;
+            } catch (err) {
+                // If user cancels share or it fails, fall back to other methods
+                console.log('Web Share failed or cancelled:', err);
+            }
+        }
+
+        // Fallback: open WhatsApp web/intent
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-        window.open(whatsappUrl, '_blank');
+        const win = window.open(whatsappUrl, '_blank');
+
+        // If popup blocked, copy to clipboard as last resort
+        if (!win) {
+            try {
+                await navigator.clipboard.writeText(shareText);
+                alert('Share text copied to clipboard. Paste it into WhatsApp to share.');
+            } catch (err) {
+                alert('Could not open WhatsApp or copy to clipboard. Here is the text to share:\n\n' + shareText);
+            }
+        }
     }
 
     // Show results page after session ends
