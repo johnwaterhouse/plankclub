@@ -43,6 +43,12 @@ class PlankClub {
         this.startTime = null;
         this.phaseStartTime = null; // Track phase start for accurate timing
         this.lastMetronomeSecond = null; // Track last metronome tick to prevent duplicates
+        this.lastMilestoneSecond = null; // Track last milestone sound to prevent duplicates
+
+        // Failure mode
+        this.isFailureMode = false;
+        this.personalBest = this.loadPersonalBest();
+        this.hasBeatenBest = false; // Track if we've beaten best in current plank
 
         // Wake lock
         this.wakeLock = null;
@@ -89,6 +95,22 @@ class PlankClub {
     // Save data to localStorage
     saveData() {
         localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+    }
+
+    // Load personal best for failure mode
+    loadPersonalBest() {
+        const stored = localStorage.getItem('plankPersonalBest');
+        return stored ? parseInt(stored) : 0;
+    }
+
+    // Save personal best for failure mode
+    savePersonalBest(seconds) {
+        if (seconds > this.personalBest) {
+            this.personalBest = seconds;
+            localStorage.setItem('plankPersonalBest', seconds.toString());
+            return true;
+        }
+        return false;
     }
 
     // Get today's date in YYYY-MM-DD format (local timezone)
@@ -174,10 +196,11 @@ class PlankClub {
         const prefs = localStorage.getItem('timerPreferences');
         if (prefs) {
             try {
-                const { count, duration, rest } = JSON.parse(prefs);
+                const { count, duration, rest, failureMode } = JSON.parse(prefs);
                 document.getElementById('timerCount').value = count || 3;
                 document.getElementById('timerDuration').value = duration || 60;
                 document.getElementById('restDuration').value = rest || 30;
+                document.getElementById('failureMode').checked = failureMode || false;
             } catch (e) {
                 console.log('Could not load timer preferences');
             }
@@ -185,9 +208,9 @@ class PlankClub {
     }
 
     // Save timer preferences to localStorage
-    saveTimerPreferences(count, duration, rest) {
+    saveTimerPreferences(count, duration, rest, failureMode) {
         try {
-            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest }));
+            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest, failureMode }));
         } catch (e) {
             console.log('Could not save timer preferences');
         }
@@ -601,22 +624,27 @@ class PlankClub {
         const countInput = document.getElementById('timerCount');
         const durationInput = document.getElementById('timerDuration');
         const restInput = document.getElementById('restDuration');
+        const failureModeInput = document.getElementById('failureMode');
 
         this.totalPlanks = parseInt(countInput.value) || 3;
         this.plankDuration = parseInt(durationInput.value) || 60;
         this.restDuration = parseInt(restInput.value) || 30;
+        this.isFailureMode = failureModeInput.checked;
 
         // Save preferences for next time
-        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration);
+        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration, this.isFailureMode);
 
         if (this.totalPlanks < CONFIG.TIMER_MIN_PLANKS || this.totalPlanks > CONFIG.TIMER_MAX_PLANKS) {
             this.showTimerMessage(`❌ Number of planks must be between ${CONFIG.TIMER_MIN_PLANKS} and ${CONFIG.TIMER_MAX_PLANKS}`, 'error');
             return;
         }
 
-        if (this.plankDuration < CONFIG.PLANK_MIN_DURATION || this.plankDuration > CONFIG.PLANK_MAX_DURATION) {
-            this.showTimerMessage(`❌ Duration must be between ${CONFIG.PLANK_MIN_DURATION} and ${CONFIG.PLANK_MAX_DURATION} seconds`, 'error');
-            return;
+        // Only validate duration if not in failure mode
+        if (!this.isFailureMode) {
+            if (this.plankDuration < CONFIG.PLANK_MIN_DURATION || this.plankDuration > CONFIG.PLANK_MAX_DURATION) {
+                this.showTimerMessage(`❌ Duration must be between ${CONFIG.PLANK_MIN_DURATION} and ${CONFIG.PLANK_MAX_DURATION} seconds`, 'error');
+                return;
+            }
         }
 
         if (this.restDuration < CONFIG.REST_MIN_DURATION || this.restDuration > CONFIG.REST_MAX_DURATION) {
@@ -631,10 +659,12 @@ class PlankClub {
         this.currentPlank = 1;
         this.completedPlanks = [];
         this.timerState = 'plank';
-        this.timeRemaining = this.plankDuration;
+        this.timeRemaining = this.isFailureMode ? 0 : this.plankDuration;
         this.startTime = new Date();
         this.phaseStartTime = Date.now();
         this.lastMetronomeSecond = null;
+        this.lastMilestoneSecond = null;
+        this.hasBeatenBest = false;
 
         // Display start time
         const timeStr = this.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -644,6 +674,7 @@ class PlankClub {
         countInput.disabled = true;
         durationInput.disabled = true;
         restInput.disabled = true;
+        failureModeInput.disabled = true;
 
         // Show/hide buttons
         document.getElementById('startTimerBtn').style.display = 'none';
@@ -662,14 +693,26 @@ class PlankClub {
             // Resume
             this.timerState = this.previousTimerState || 'plank';
             this.previousTimerState = null;
-            this.phaseStartTime = Date.now(); // Reset phase start time
+            // Adjust phase start time to account for paused duration
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // For failure mode, we need to continue from current elapsed time
+                this.phaseStartTime = Date.now() - (this.timeRemaining * 1000);
+            } else {
+                this.phaseStartTime = Date.now();
+            }
             document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
             this.runTimer();
         } else {
-            // Pause - calculate remaining time based on elapsed time
+            // Pause - calculate current time
             const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
-            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
-            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // Failure mode: keep elapsed time
+                this.timeRemaining = elapsed;
+            } else {
+                // Normal mode: calculate remaining
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+            }
             this.previousTimerState = this.timerState;
             this.timerState = 'paused';
             document.getElementById('pauseTimerBtn').innerHTML = '▶️ Resume';
@@ -680,6 +723,16 @@ class PlankClub {
 
     stopTimer() {
         clearInterval(this.timerInterval);
+
+        // In failure mode, log the current plank time if in progress
+        if (this.isFailureMode && this.timerState === 'plank' && this.timeRemaining > 0) {
+            this.completedPlanks.push(this.timeRemaining);
+            // Save personal best if beaten
+            if (this.timeRemaining > this.personalBest) {
+                this.savePersonalBest(this.timeRemaining);
+            }
+        }
+
         this.timerState = 'idle';
         this.startTime = null;
 
@@ -690,6 +743,7 @@ class PlankClub {
         document.getElementById('timerCount').disabled = false;
         document.getElementById('timerDuration').disabled = false;
         document.getElementById('restDuration').disabled = false;
+        document.getElementById('failureMode').disabled = false;
 
         // Show/hide buttons
         document.getElementById('startTimerBtn').style.display = 'inline-block';
@@ -714,47 +768,75 @@ class PlankClub {
 
     runTimer() {
         this.timerInterval = setInterval(() => {
-            // Calculate time remaining based on elapsed time (prevents drift)
             const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
-            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
-            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
 
-            // Play metronome tick in last 5 seconds of any phase (only once per second)
-            if (this.timeRemaining > 0 && this.timeRemaining <= 5) {
-                if (this.lastMetronomeSecond !== this.timeRemaining) {
-                    this.playMetronomeTick();
-                    this.lastMetronomeSecond = this.timeRemaining;
-                }
-            }
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // Failure mode: count UP
+                this.timeRemaining = elapsed;
 
-            if (this.timeRemaining <= 0) {
-                if (this.timerState === 'plank') {
-                    // Plank completed
-                    this.completedPlanks.push(this.plankDuration);
-                    this.playBeep();
+                // Play milestone sounds: 30s, then every 10s after (40, 50, 60, etc.)
+                if (this.timeRemaining >= 30) {
+                    const isMilestone = this.timeRemaining === 30 ||
+                        (this.timeRemaining > 30 && (this.timeRemaining - 30) % 10 === 0);
 
-                    if (this.currentPlank >= this.totalPlanks) {
-                        // All planks completed
-                        this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
-                        this.logTimedPlanks();
-                        this.stopTimer(); // stopTimer handles cleanup (interval, wake lock, etc.)
-                        this.showResultsPage();
-                        return;
-                    } else {
-                        // Start rest period
-                        this.timerState = 'rest';
-                        this.phaseStartTime = Date.now();
-                        this.timeRemaining = this.restDuration;
-                        this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
+                    if (isMilestone && this.lastMilestoneSecond !== this.timeRemaining) {
+                        this.playMilestoneSound();
+                        this.lastMilestoneSecond = this.timeRemaining;
                     }
-                } else if (this.timerState === 'rest') {
-                    // Rest completed, start next plank
-                    this.playBeep();
-                    this.currentPlank++;
-                    this.timerState = 'plank';
-                    this.phaseStartTime = Date.now();
-                    this.timeRemaining = this.plankDuration;
-                    this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+                }
+
+                // Check if beating personal best (only alert once per plank)
+                if (this.personalBest > 0 && this.timeRemaining > this.personalBest && !this.hasBeatenBest) {
+                    this.hasBeatenBest = true;
+                    this.playCelebrationSound();
+                    this.showTimerMessage(`🏆 NEW PERSONAL BEST! Previous: ${this.personalBest}s`, 'success');
+                }
+            } else {
+                // Normal mode: count DOWN
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+
+                // Play metronome tick in last 5 seconds of any phase (only once per second)
+                if (this.timeRemaining > 0 && this.timeRemaining <= 5) {
+                    if (this.lastMetronomeSecond !== this.timeRemaining) {
+                        this.playMetronomeTick();
+                        this.lastMetronomeSecond = this.timeRemaining;
+                    }
+                }
+
+                if (this.timeRemaining <= 0) {
+                    if (this.timerState === 'plank') {
+                        // Plank completed
+                        this.completedPlanks.push(this.plankDuration);
+                        this.playBeep();
+
+                        if (this.currentPlank >= this.totalPlanks) {
+                            // All planks completed
+                            this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
+                            this.logTimedPlanks();
+                            this.stopTimer();
+                            this.showResultsPage();
+                            return;
+                        } else {
+                            // Start rest period
+                            this.timerState = 'rest';
+                            this.phaseStartTime = Date.now();
+                            this.timeRemaining = this.restDuration;
+                            this.lastMetronomeSecond = null;
+                            this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
+                        }
+                    } else if (this.timerState === 'rest') {
+                        // Rest completed, start next plank
+                        this.playBeep();
+                        this.currentPlank++;
+                        this.timerState = 'plank';
+                        this.phaseStartTime = Date.now();
+                        this.timeRemaining = this.isFailureMode ? 0 : this.plankDuration;
+                        this.lastMetronomeSecond = null;
+                        this.lastMilestoneSecond = null;
+                        this.hasBeatenBest = false;
+                        this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+                    }
                 }
             }
 
@@ -770,8 +852,13 @@ class PlankClub {
         document.getElementById('timerTime').textContent = timeStr;
 
         if (this.timerState === 'plank') {
-            document.getElementById('timerStatus').textContent = `🏋️ PLANK ${this.currentPlank}`;
-            document.getElementById('timerStatus').style.color = '#6aaa64';
+            if (this.isFailureMode) {
+                document.getElementById('timerStatus').textContent = `💪 TO FAILURE ${this.currentPlank}`;
+                document.getElementById('timerStatus').style.color = '#e67e22';
+            } else {
+                document.getElementById('timerStatus').textContent = `🏋️ PLANK ${this.currentPlank}`;
+                document.getElementById('timerStatus').style.color = '#6aaa64';
+            }
         } else if (this.timerState === 'rest') {
             document.getElementById('timerStatus').textContent = `😌 REST`;
             document.getElementById('timerStatus').style.color = '#b59f3b';
@@ -780,8 +867,12 @@ class PlankClub {
             document.getElementById('timerStatus').style.color = '#818384';
         }
 
-        document.getElementById('timerProgress').textContent =
-            `Plank ${this.currentPlank} of ${this.totalPlanks} (${this.completedPlanks.length} completed)`;
+        // Show personal best in progress text for failure mode
+        let progressText = `Plank ${this.currentPlank} of ${this.totalPlanks} (${this.completedPlanks.length} completed)`;
+        if (this.isFailureMode && this.timerState === 'plank' && this.personalBest > 0) {
+            progressText += ` | PB: ${this.personalBest}s`;
+        }
+        document.getElementById('timerProgress').textContent = progressText;
     }
 
     showTimerMessage(message, type) {
@@ -873,6 +964,69 @@ class PlankClub {
             oscillator.stop(this.audioContext.currentTime + tickDuration);
         } catch (e) {
             // Silently fail if audio is not supported
+            console.log('Audio not supported');
+        }
+    }
+
+    playMilestoneSound() {
+        // Play a double-beep for milestone (30s, 40s, 50s, etc.)
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // First beep
+            const osc1 = this.audioContext.createOscillator();
+            const gain1 = this.audioContext.createGain();
+            osc1.connect(gain1);
+            gain1.connect(this.audioContext.destination);
+            osc1.frequency.value = 600;
+            osc1.type = 'sine';
+            gain1.gain.setValueAtTime(0.25, this.audioContext.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+            osc1.start(this.audioContext.currentTime);
+            osc1.stop(this.audioContext.currentTime + 0.15);
+
+            // Second beep (slightly higher)
+            const osc2 = this.audioContext.createOscillator();
+            const gain2 = this.audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(this.audioContext.destination);
+            osc2.frequency.value = 700;
+            osc2.type = 'sine';
+            gain2.gain.setValueAtTime(0.25, this.audioContext.currentTime + 0.2);
+            gain2.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.35);
+            osc2.start(this.audioContext.currentTime + 0.2);
+            osc2.stop(this.audioContext.currentTime + 0.35);
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
+    playCelebrationSound() {
+        // Play ascending celebration tones for beating personal best
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const frequencies = [523, 659, 784, 1047]; // C5, E5, G5, C6
+            const duration = 0.15;
+
+            frequencies.forEach((freq, i) => {
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                const startTime = this.audioContext.currentTime + (i * 0.12);
+                gain.gain.setValueAtTime(0.3, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            });
+        } catch (e) {
             console.log('Audio not supported');
         }
     }
