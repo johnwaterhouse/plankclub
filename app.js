@@ -227,6 +227,7 @@ class PlankClub {
 
         // Timer event listeners
         document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
+        document.getElementById('doneTimerBtn').addEventListener('click', () => this.completePlank());
         document.getElementById('pauseTimerBtn').addEventListener('click', () => this.pauseTimer());
         document.getElementById('stopTimerBtn').addEventListener('click', () => this.stopTimer());
 
@@ -678,6 +679,7 @@ class PlankClub {
 
         // Show/hide buttons
         document.getElementById('startTimerBtn').style.display = 'none';
+        document.getElementById('doneTimerBtn').style.display = this.isFailureMode ? 'inline-block' : 'none';
         document.getElementById('pauseTimerBtn').style.display = 'inline-block';
         document.getElementById('stopTimerBtn').style.display = 'inline-block';
 
@@ -724,6 +726,48 @@ class PlankClub {
         }
     }
 
+    // Complete current plank in failure mode and transition to rest or end
+    completePlank() {
+        if (!this.isFailureMode || this.timerState !== 'plank') return;
+
+        clearInterval(this.timerInterval);
+
+        // Log the current plank time
+        const plankTime = this.timeRemaining;
+        if (plankTime > 0) {
+            this.completedPlanks.push(plankTime);
+            // Save personal best if beaten
+            if (plankTime > this.personalBest) {
+                this.savePersonalBest(plankTime);
+            }
+        }
+
+        this.playBeep();
+
+        if (this.currentPlank >= this.totalPlanks) {
+            // All planks completed
+            this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks to failure!`, 'success');
+            this.logTimedPlanks();
+            this.stopTimer();
+            this.showResultsPage();
+        } else {
+            // Start rest period
+            this.timerState = 'rest';
+            this.phaseStartTime = Date.now();
+            this.timeRemaining = this.restDuration;
+            this.lastMetronomeSecond = null;
+            this.lastMilestoneSecond = null;
+            this.hasBeatenBest = false;
+            this.showTimerMessage(`✅ Plank ${this.currentPlank} complete: ${plankTime}s! Rest now.`, 'success');
+
+            // Hide Done button during rest
+            document.getElementById('doneTimerBtn').style.display = 'none';
+
+            this.updateTimerDisplay();
+            this.runTimer();
+        }
+    }
+
     stopTimer() {
         clearInterval(this.timerInterval);
 
@@ -755,6 +799,7 @@ class PlankClub {
 
         // Show/hide buttons
         document.getElementById('startTimerBtn').style.display = 'inline-block';
+        document.getElementById('doneTimerBtn').style.display = 'none';
         document.getElementById('pauseTimerBtn').style.display = 'none';
         document.getElementById('stopTimerBtn').style.display = 'none';
         document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
@@ -844,6 +889,11 @@ class PlankClub {
                         this.lastMilestoneSecond = null;
                         this.hasBeatenBest = false;
                         this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+
+                        // Show Done button again for failure mode
+                        if (this.isFailureMode) {
+                            document.getElementById('doneTimerBtn').style.display = 'inline-block';
+                        }
                     }
                 }
             }
