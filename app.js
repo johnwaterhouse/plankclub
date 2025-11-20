@@ -698,7 +698,10 @@ class PlankClub {
                 // For failure mode, we need to continue from current elapsed time
                 this.phaseStartTime = Date.now() - (this.timeRemaining * 1000);
             } else {
-                this.phaseStartTime = Date.now();
+                // For normal mode, calculate elapsed time from remaining
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                const elapsed = phaseDuration - this.timeRemaining;
+                this.phaseStartTime = Date.now() - (elapsed * 1000);
             }
             document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
             this.runTimer();
@@ -725,7 +728,11 @@ class PlankClub {
         clearInterval(this.timerInterval);
 
         // In failure mode, log the current plank time if in progress
-        if (this.isFailureMode && this.timerState === 'plank' && this.timeRemaining > 0) {
+        // Check both current state and previous state (if paused)
+        const wasInPlank = this.timerState === 'plank' ||
+            (this.timerState === 'paused' && this.previousTimerState === 'plank');
+
+        if (this.isFailureMode && wasInPlank && this.timeRemaining > 0) {
             this.completedPlanks.push(this.timeRemaining);
             // Save personal best if beaten
             if (this.timeRemaining > this.personalBest) {
@@ -734,6 +741,7 @@ class PlankClub {
         }
 
         this.timerState = 'idle';
+        this.previousTimerState = null;
         this.startTime = null;
 
         // Release wake lock
