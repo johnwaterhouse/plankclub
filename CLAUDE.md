@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture & Data Flow
 
-### Core Architecture (app.js - 814 lines)
+### Core Architecture (app.js - 1007 lines)
 
 The app uses a single `PlankClub` class that manages all state and functionality:
 
@@ -33,22 +33,27 @@ The app uses a single `PlankClub` class that manages all state and functionality
 PlankClub (class)
 ├── Data Layer
 │   ├── localStorage persistence (YYYY-MM-DD keys → plank arrays)
-│   └── Data validation on load
+│   └── Data migration (old single-number format → arrays)
+├── View Management
+│   ├── Two-page flow: setup ↔ timer-active
+│   ├── setView() controls container data-view attribute
+│   └── CSS hides/shows elements via .hide-on-timer-active
 ├── Timer System
 │   ├── setInterval-based countdown (1s updates)
 │   ├── Wake lock management
 │   ├── Audio feedback (beep + metronome tick)
-│   └── Results modal with sharing
+│   ├── Results modal with session stats
+│   └── Start time display
 ├── Plank Logging
 │   ├── Manual entry via input fields
 │   ├── Timer-based automatic logging
-│   └── Debounced status messages
+│   └── Status messages with auto-clear timeout
 ├── UI Updates
 │   ├── Progress grid (28-day calendar)
 │   ├── Statistics calculations (streaks, categories)
-│   └── Progress block updates (selective DOM manipulation)
+│   └── ISO week numbers for sharing
 └── Sharing Features
-    ├── Emoji grid generation
+    ├── Emoji grid with ISO week number
     ├── WhatsApp integration
     └── Clipboard copy
 ```
@@ -93,11 +98,11 @@ PlankClub (class)
 
 ## File Structure
 
-### `index.html` (168 lines)
+### `index.html` (170 lines)
 **Sections:**
 - Timer control inputs (number, duration, rest)
-- Timer display (time, status, progress)
-- Manual plank entry form
+- Timer display (time, status, progress, start time)
+- Manual plank entry form (seconds + count)
 - 28-day progress grid with legend
 - Statistics cards (streaks, categories, totals)
 - Share buttons (WhatsApp, clipboard)
@@ -108,40 +113,45 @@ PlankClub (class)
 - `#progressGrid` - 28-day calendar blocks
 - `#timerTime` - Large timer display
 - `#timerStatus` - PLANK/REST/PAUSED indicator
+- `#timerStartTime` - Shows session start time
 - `#timerMessage` - Timer feedback messages
 - `#todayStatus` - Manual entry feedback
 - `#resultsModal` - Created dynamically after session
 
-### `app.js` (814 lines)
-**Message Constants (MESSAGES object):**
-- User-facing messages organized by category
-- Templated with parameters for consistency
-- Centralized for internationalization support
+**View Management:**
+- Container has `data-view` attribute ("setup" or "timer-active")
+- Elements with `.hide-on-timer-active` hidden during timer
 
+### `app.js` (1007 lines)
 **Key Methods:**
 - `init()` - Initialize app and load preferences
-- `loadData()` - Validate and migrate localStorage data
-- `saveData()` - Try-catch wrapped localStorage writes
+- `setView()` - Switch between setup and timer-active views
+- `loadData()` - Load and migrate localStorage data
+- `saveData()` - Persist data to localStorage
+- `getTodayDate()` / `getDateDaysAgo()` - Timezone-safe date formatting
+- `getISOWeek()` / `getISOWeekYear()` - ISO week calculations for sharing
 - `startTimer()` / `pauseTimer()` / `stopTimer()` - Timer lifecycle
 - `runTimer()` - Main timer loop with metronome logic
-- `logPlank()` - Manual entry with debounced status
-- `logTimedPlanks()` - Race-condition-safe session logging
-- `renderProgressGrid()` - Initial grid creation
-- `updateProgressBlockForDate()` - Selective DOM update
+- `logPlank()` - Manual entry with status feedback
+- `logTimedPlanks()` - Log completed session planks
+- `renderProgressGrid()` - Create 28-day grid
 - `calculateCurrentStreak()` / `calculateMaxStreak()` - Streak calculations
 - `updateStats()` - Category counting and stat display
-- `generateShareText()` - Wordle-style emoji grid
+- `generateShareText()` - Wordle-style emoji grid with ISO week
 - `shareProgress()` / `shareToWhatsApp()` - Share functionality
-- `showResultsPage()` - Post-session modal
+- `showResultsPage()` / `createResultsModal()` - Post-session modal
+- `playBeep()` / `playMetronomeTick()` - Audio feedback
+- `requestWakeLock()` / `releaseWakeLock()` - Screen wake lock
 
 **Configuration (CONFIG object):**
 - `DISPLAY_DAYS: 28` - Grid coverage
+- `SHARE_DAYS: 7` - Days in share emoji grid
 - `PLANK_MIN_DURATION: 10` - Validation minimum
 - `PLANK_MAX_DURATION: 600` - Validation maximum
 - `MESSAGE_TIMEOUT: 3000` - Auto-hide message delay
 - Audio parameters: `BEEP_FREQUENCY`, `BEEP_DURATION`, `BEEP_VOLUME`
 
-### `styles.css` (780 lines)
+### `styles.css` (926 lines)
 **CSS Variables (36 custom properties):**
 - Color system (primary, secondary, accent, level colors)
 - Spacing scale (xs, sm, md, lg, xl)
@@ -153,7 +163,9 @@ PlankClub (class)
 - `.progress-grid` - 28-day calendar (7-column layout)
 - `.block` / `.block-today` / `.block-{level}` - Progress blocks
 - `.stat-card` - Statistics display cards
-- `.modal` - Settings and results modals
+- `.modal` / `.results-modal` - Settings and results modals
+- `.hide-on-timer-active` - Elements hidden during timer session
+- `[data-view="timer-active"]` - View state styling
 - `@media (max-width: 500px)` - Mobile optimizations
 
 **Responsive Breakpoints:**
@@ -166,12 +178,12 @@ PlankClub (class)
 
 ### Adding a New Feature
 
-1. **Update MESSAGES object** in app.js if adding user-facing text
-2. **Add configuration constant** to CONFIG if needed (min/max values, timeouts, etc.)
-3. **Implement method** in PlankClub class
-4. **Add event listener** in `setupEventListeners()` if user interaction needed
-5. **Update `init()`** to call new initialization if required
-6. **Add HTML elements** to index.html with semantic IDs
+1. **Add configuration constant** to CONFIG if needed (min/max values, timeouts, etc.)
+2. **Implement method** in PlankClub class
+3. **Add event listener** in `setupEventListeners()` if user interaction needed
+4. **Update `init()`** to call new initialization if required
+5. **Add HTML elements** to index.html with semantic IDs
+6. **Consider view management** - should element hide during timer? Add `.hide-on-timer-active`
 7. **Add CSS variables** to `:root` in styles.css for colors/sizing
 8. **Add styles** with mobile breakpoint consideration
 
@@ -180,7 +192,7 @@ PlankClub (class)
 1. **Check data validation** - Ensure loadData() validates the specific case
 2. **Check error handling** - Verify try-catch wraps any localStorage/DOM operations
 3. **Check race conditions** - Look for async code that could be interrupted
-4. **Check timezone handling** - Use `formatDateAsKey()` consistently
+4. **Check timezone handling** - Use `getTodayDate()` or `getDateDaysAgo()` consistently
 5. **Test with corrupted data** - Manually break localStorage to verify graceful handling
 
 ### Testing Changes
@@ -194,10 +206,10 @@ Since there's no build process:
 
 ### Performance Considerations
 
-- **DOM Updates**: Use `updateProgressBlockForDate()` instead of `renderProgressGrid()` for single-day changes
-- **Message Debouncing**: Uses `statusMessageTimeout` to prevent flicker from rapid updates
-- **Audio Context**: Single shared instance prevents memory leaks
-- **LocalStorage**: Validate on load once, not on every access
+- **DOM Updates**: `renderProgressGrid()` rebuilds entire grid - consider selective updates for optimization
+- **Audio Context**: Single shared instance (`this.audioContext`) prevents memory leaks
+- **LocalStorage**: Migrate data format on load once, not on every access
+- **Timer Accuracy**: Uses `phaseStartTime` + elapsed calculation to prevent drift
 
 ---
 
@@ -209,8 +221,9 @@ Since there's no build process:
 
 ✅ **Correct:**
 ```javascript
-const dateStr = this.formatDateAsKey(new Date());
-// OR manually: `${year}-${month}-${day}` format
+const dateStr = this.getTodayDate();
+// OR this.getDateDaysAgo(n) for past dates
+// Uses: `${year}-${month}-${day}` format with padded values
 ```
 
 ❌ **Wrong:**
@@ -219,6 +232,8 @@ const dateStr = date.toISOString().split('T')[0];  // Uses UTC!
 ```
 
 This is critical because users near midnight could log planks with incorrect dates.
+
+**Note:** Some methods like `calculateCurrentStreak()` still use `toISOString()` for historical reasons - this is a known inconsistency that could cause edge-case bugs.
 
 ### Error Handling Pattern
 
@@ -308,10 +323,9 @@ button {
 - Currently no cleanup/archival system - users must manually clear old data
 
 ### Performance Notes
-- Full grid re-render called on app load and after logPlank
-- Could be optimized to only update changed blocks
-- `updateProgressBlockForDate()` method exists for selective updates
-- Message debouncing prevents flicker from rapid updates
+- Full grid re-render (`renderProgressGrid()`) called on app load and after logPlank
+- Could be optimized to only update changed blocks (no selective update method exists yet)
+- Messages auto-clear after `MESSAGE_TIMEOUT` (3000ms)
 
 ### Accessibility
 - Full WCAG AA compliance with ARIA labels
@@ -323,13 +337,18 @@ button {
 
 ## Recent Refactoring (Latest Commits)
 
-**Last major improvements included:**
-1. Critical bug fixes (timezone, race conditions, storage quota, data validation)
-2. Code consolidation (streak logic, message constants)
-3. Performance optimization (selective DOM updates with `updateProgressBlockForDate()`)
-4. Message system (debouncing with `showDebouncedStatusMessage()`)
-5. Accessibility (WCAG AA, ARIA labels, color contrast improvement)
-6. CSS organization (CSS variables for consistency)
+**Latest improvements (as of November 2025):**
+1. **Two-page timer flow** - Clean separation between setup and active timer views
+2. **ISO week numbers** - Share text now shows "Week X YYYY" instead of date range
+3. **Results modal** - Session completion shows stats with sharing options
+4. **Metronome countdown** - Audio tick in last 5 seconds of each phase
+5. **Start time display** - Shows when timer session began
+6. **View management** - `setView()` method with CSS-based element visibility
+
+**Previous improvements:**
+- Critical bug fixes (timezone, race conditions, storage quota, data validation)
+- Accessibility (WCAG AA, ARIA labels, color contrast improvement)
+- CSS organization (CSS variables for consistency)
 
 For detailed history, see recent commits in git log.
 
@@ -383,9 +402,9 @@ gh pr create --title "..." --body "..."
 
 ## Questions to Ask Before Refactoring
 
-1. **Does this change affect date handling?** If yes, verify timezone consistency with `formatDateAsKey()`
+1. **Does this change affect date handling?** If yes, use `getTodayDate()` or `getDateDaysAgo()` for timezone safety
 2. **Does this involve localStorage?** If yes, add error handling for QuotaExceededError
 3. **Does this modify timer state?** If yes, check for race conditions and guard against concurrent calls
-4. **Does this add UI text?** If yes, add message to MESSAGES constant
-5. **Does this add new values?** If yes, add to CONFIG constant for centralized management
+4. **Does this add configurable values?** If yes, add to CONFIG constant for centralized management
+5. **Does this affect the timer view?** If yes, consider `.hide-on-timer-active` for elements
 6. **Does this affect mobile?** If yes, test at 500px breakpoint
