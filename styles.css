@@ -342,6 +342,15 @@ input[type="number"]:focus {
     background-color: var(--color-error-light);
 }
 
+.btn-done {
+    background-color: #e67e22;
+    color: white;
+}
+
+.btn-done:hover {
+    background-color: #f39c12;
+}
+
 .btn-timer:active {
     transform: scale(0.98);
 }
