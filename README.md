@@ -2,51 +2,88 @@
 
 Track and share your daily plank exercises with friends, Wordle-style!
 
+**Live at: [pcjohn.co.uk](https://pcjohn.co.uk)**
+
 ## Features
 
-- 📊 Track daily plank duration (in seconds)
+### Timer Modes
+- **Fixed Duration Timer** - Set number of planks, duration, and rest time
+- **Plank to Failure** - Unlimited planks, timer counts up until you stop
+  - Milestone sounds at 30s, then every 10s
+  - Personal best tracking with celebration sound
+  - Manual rest control (press Go when ready)
+
+### Progress Tracking
+- 📊 Track multiple planks per day with individual durations
 - 📅 Visual progress grid showing your last 28 days
 - 🟩 Color-coded blocks (like Wordle):
   - ⬜ No plank
   - 🟨 < 30 seconds
   - 🟩 30-60 seconds
   - 🟢 60+ seconds
-- 📈 Stats tracking (current streak, best streak, total planks, best time)
-- 📤 Share your progress with friends (copy to clipboard)
-- 💾 All data stored locally in your browser (no server required)
+- 📈 Stats: current streak, best streak, planks by category
+
+### Sharing
+- 📤 Copy progress to clipboard
+- 💬 Direct WhatsApp share
+- Shows ISO week number and stats
+
+### Technical
+- 💾 All data stored locally (no server required)
+- 📱 Screen wake lock during timer
+- 🔊 Audio feedback (beeps, metronome countdown)
+- Works completely offline after first load
 
 ## How to Use
 
-1. **Open the app**: Simply open `index.html` in your web browser
-2. **Log your plank**: Enter the time in seconds and click "Log Plank"
-3. **Track progress**: View your 4-week grid and stats
-4. **Share**: Click the share button to copy your progress and paste it anywhere!
+### Timer Mode
+1. Set number of planks, duration (seconds), and rest time
+2. Or check "Plank to Failure" for unlimited mode
+3. Press Start Timer
+4. In failure mode: press Done when you fail, Go to start next plank
+5. Press Stop to end session
+
+### Manual Entry
+1. Enter time in seconds
+2. Set count (for multiple identical planks)
+3. Click "Log Plank"
+
+### Share Progress
+Click WhatsApp or Copy button to share your weekly emoji grid!
 
 ## Example Share
 
 ```
 💪 Plank Club
+Week 47 2025
 
 ⬜🟨🟩🟢🟩🟨🟩
 
-🔥 Streak: 5 | Total: 12
+📅 Today: 3 planks (180s)
+🔥 Streak: 5 | Total Planks: 42
 
 Join me at Plank Club!
+https://pcjohn.co.uk
 ```
 
 ## Running Locally
 
-No build process needed! Just:
+No build process needed!
 1. Clone this repository
 2. Open `index.html` in any modern web browser
 3. Start tracking your planks!
+
+## Deployment
+
+Deployed via Vercel from the `main` branch. Push to main triggers automatic deployment.
 
 ## Tech Stack
 
 - Pure HTML, CSS, and vanilla JavaScript
 - No dependencies, no build tools
-- Works completely offline after first load
-- Data persisted in browser's localStorage
+- Web Audio API for sounds
+- Screen Wake Lock API
+- localStorage for persistence
 
 ---
 
