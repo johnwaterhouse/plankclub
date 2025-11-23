@@ -689,6 +689,21 @@ footer {
     border: 1px solid var(--bg-tertiary);
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
 .clear-stats-controls {
     display: flex;
     align-items: center;

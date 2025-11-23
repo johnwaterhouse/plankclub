@@ -196,11 +196,12 @@ class PlankClub {
         const prefs = localStorage.getItem('timerPreferences');
         if (prefs) {
             try {
-                const { count, duration, rest, failureMode } = JSON.parse(prefs);
+                const { count, duration, rest, failureMode, miniShare } = JSON.parse(prefs);
                 document.getElementById('timerCount').value = count || 3;
                 document.getElementById('timerDuration').value = duration || 60;
                 document.getElementById('restDuration').value = rest || 30;
                 document.getElementById('failureMode').checked = failureMode || false;
+                document.getElementById('miniShare').checked = miniShare || false;
             } catch (e) {
                 console.log('Could not load timer preferences');
             }
@@ -208,9 +209,9 @@ class PlankClub {
     }
 
     // Save timer preferences to localStorage
-    saveTimerPreferences(count, duration, rest, failureMode) {
+    saveTimerPreferences(count, duration, rest, failureMode, miniShare) {
         try {
-            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest, failureMode }));
+            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest, failureMode, miniShare }));
         } catch (e) {
             console.log('Could not save timer preferences');
         }
@@ -235,6 +236,7 @@ class PlankClub {
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
         document.getElementById('closeModalBtn').addEventListener('click', () => this.closeSettings());
         document.getElementById('clearStatsBtn').addEventListener('click', () => this.promptClearStats());
+        document.getElementById('miniShare').addEventListener('change', () => this.saveMiniSharePreference());
 
         // Confirmation modal event listeners
         document.getElementById('confirmYesBtn').addEventListener('click', () => this.confirmClearStats());
@@ -464,32 +466,24 @@ class PlankClub {
     generateShareText() {
         const today = this.getTodayDate();
         const daysToShare = CONFIG.SHARE_DAYS;
+        const miniShare = document.getElementById('miniShare').checked;
 
         // Get ISO week number for today
         const todayDate = new Date();
         const weekNumber = this.getISOWeek(todayDate);
         const weekYear = this.getISOWeekYear(todayDate);
 
-        let shareText = '💪 Plank Club\n';
-        shareText += `Week ${weekNumber} ${weekYear}\n\n`;
-
-        // Add grid
+        // Build grid
+        let grid = '';
         for (let i = daysToShare - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
             const emoji = this.getBlockEmoji(dateData);
-            shareText += emoji;
+            grid += emoji;
         }
 
-        shareText += '\n\n';
-
-        // Add stats
+        // Calculate stats
         const currentStreak = this.calculateCurrentStreak();
-        const todayData = this.data[today] || [];
-        const todayPlanks = todayData.length;
-        const todayTotal = this.getTotalSeconds(todayData);
-
-        // Count total planks (individual exercises, not days)
         let totalPlanks = 0;
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
@@ -497,13 +491,27 @@ class PlankClub {
             }
         }
 
+        if (miniShare) {
+            // Mini format: compact single-line stats
+            return `💪 Plank Club W${weekNumber}\n${grid}\n🔥 ${currentStreak} streak | ${totalPlanks} total`;
+        }
+
+        // Normal format (without link)
+        let shareText = '💪 Plank Club\n';
+        shareText += `Week ${weekNumber} ${weekYear}\n\n`;
+        shareText += grid;
+        shareText += '\n\n';
+
+        const todayData = this.data[today] || [];
+        const todayPlanks = todayData.length;
+        const todayTotal = this.getTotalSeconds(todayData);
+
         // Show today's stats if available
         if (todayPlanks > 0) {
             shareText += `📅 Today: ${todayPlanks} plank${todayPlanks > 1 ? 's' : ''} (${todayTotal}s)\n`;
         }
 
-        shareText += `🔥 Streak: ${currentStreak} | Total Planks: ${totalPlanks}\n`;
-        shareText += '\nJoin me at Plank Club!\nhttps://pcjohn.co.uk';
+        shareText += `🔥 Streak: ${currentStreak} | Total Planks: ${totalPlanks}`;
 
         return shareText;
     }
@@ -626,6 +634,7 @@ class PlankClub {
         const durationInput = document.getElementById('timerDuration');
         const restInput = document.getElementById('restDuration');
         const failureModeInput = document.getElementById('failureMode');
+        const miniShareInput = document.getElementById('miniShare');
 
         this.totalPlanks = parseInt(countInput.value) || 3;
         this.plankDuration = parseInt(durationInput.value) || 60;
@@ -633,7 +642,7 @@ class PlankClub {
         this.isFailureMode = failureModeInput.checked;
 
         // Save preferences for next time
-        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration, this.isFailureMode);
+        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration, this.isFailureMode, miniShareInput.checked);
 
         if (this.totalPlanks < CONFIG.TIMER_MIN_PLANKS || this.totalPlanks > CONFIG.TIMER_MAX_PLANKS) {
             this.showTimerMessage(`❌ Number of planks must be between ${CONFIG.TIMER_MIN_PLANKS} and ${CONFIG.TIMER_MAX_PLANKS}`, 'error');
@@ -1175,6 +1184,15 @@ class PlankClub {
 
     closeSettings() {
         document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    saveMiniSharePreference() {
+        const count = parseInt(document.getElementById('timerCount').value) || 3;
+        const duration = parseInt(document.getElementById('timerDuration').value) || 60;
+        const rest = parseInt(document.getElementById('restDuration').value) || 30;
+        const failureMode = document.getElementById('failureMode').checked;
+        const miniShare = document.getElementById('miniShare').checked;
+        this.saveTimerPreferences(count, duration, rest, failureMode, miniShare);
     }
 
     promptClearStats() {
