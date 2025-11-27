@@ -183,9 +183,15 @@ class PlankClub {
     }
 
     // Get emoji for sharing based on plank time
-    getBlockEmoji(dateData) {
+    getBlockEmoji(dateData, currentStreak = 0) {
         const totalSeconds = this.getTotalSeconds(dateData);
         if (totalSeconds === 0) return '⬜';
+
+        // 14+ day streak earns stars for completed days
+        if (currentStreak >= 14 && totalSeconds > 0) {
+            return '⭐';
+        }
+
         if (totalSeconds < CONFIG.BEGINNER_MAX) return '🟨';
         if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
         return '🟢';
@@ -473,17 +479,19 @@ class PlankClub {
         const weekNumber = this.getISOWeek(todayDate);
         const weekYear = this.getISOWeekYear(todayDate);
 
+        // Calculate streak first (needed for star badge)
+        const currentStreak = this.calculateCurrentStreak();
+
         // Build grid
         let grid = '';
         for (let i = daysToShare - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
-            const emoji = this.getBlockEmoji(dateData);
+            const emoji = this.getBlockEmoji(dateData, currentStreak);
             grid += emoji;
         }
 
         // Calculate stats
-        const currentStreak = this.calculateCurrentStreak();
         let totalPlanks = 0;
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
