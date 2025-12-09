@@ -912,6 +912,10 @@ footer {
         flex-direction: column;
     }
 
+    .timer-input-row {
+        flex-direction: column;
+    }
+
     .timer-time {
         font-size: 3em;
     }
