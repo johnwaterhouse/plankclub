@@ -39,6 +39,8 @@ class PlankClub {
         this.plankDuration = 0;
         this.restDuration = 0;
         this.completedPlanks = [];
+        this.lastSessionPlanks = 0; // Store session stats for results modal
+        this.lastSessionTotal = 0;
         this.pausedTime = 0;
         this.startTime = null;
         this.phaseStartTime = null; // Track phase start for accurate timing
@@ -556,8 +558,8 @@ class PlankClub {
         const today = this.getTodayDate();
         const todayData = this.data[today] || [];
         const todayTotal = this.getTotalSeconds(todayData);
-        const sessionPlanks = this.completedPlanks.length;
-        const sessionTotal = this.completedPlanks.reduce((sum, s) => sum + s, 0);
+        const sessionPlanks = this.lastSessionPlanks || 0;
+        const sessionTotal = this.lastSessionTotal || 0;
         const currentStreak = this.calculateCurrentStreak();
 
         // Hide main timer display and show results modal
@@ -998,6 +1000,10 @@ class PlankClub {
         if (!this.data[today]) {
             this.data[today] = [];
         }
+
+        // Store session stats before clearing (for results modal)
+        this.lastSessionPlanks = this.completedPlanks.length;
+        this.lastSessionTotal = this.completedPlanks.reduce((sum, s) => sum + s, 0);
 
         // Add all completed planks
         this.data[today].push(...this.completedPlanks);
