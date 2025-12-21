@@ -146,14 +146,18 @@ PlankClub (class)
 **Configuration (CONFIG object):**
 - `DISPLAY_DAYS: 28` - Grid coverage
 - `SHARE_DAYS: 7` - Days in share emoji grid
+- `BEGINNER_MAX: 30` - Max seconds for beginner level (0-29s)
+- `INTERMEDIATE_MAX: 60` - Max seconds for intermediate level (30-59s)
+- `ADVANCED_MAX: 90` - Max seconds for advanced level (60-89s)
+- `ELITE_MAX: 120` - Max seconds for elite level (90-119s)
 - `PLANK_MIN_DURATION: 10` - Validation minimum
 - `PLANK_MAX_DURATION: 600` - Validation maximum
 - `MESSAGE_TIMEOUT: 3000` - Auto-hide message delay
 - Audio parameters: `BEEP_FREQUENCY`, `BEEP_DURATION`, `BEEP_VOLUME`
 
 ### `styles.css` (926 lines)
-**CSS Variables (36 custom properties):**
-- Color system (primary, secondary, accent, level colors)
+**CSS Variables (38 custom properties):**
+- Color system (primary, secondary, accent, 5 level colors)
 - Spacing scale (xs, sm, md, lg, xl)
 - Font sizes (base, heading, timer, input)
 - Touch targets (44px minimum for WCAG compliance)
@@ -277,9 +281,11 @@ this.data[today].push(...planksToLog);           // Safe to use snapshot
 - Accent: `#6aaa64` (green success)
 - Warning: `#b59f3b` (yellow)
 - Error: `#b53b3b` (red)
-- Beginner: `#b59f3b` (yellow emoji color)
-- Intermediate: `#538d4e` (green emoji color)
-- Advanced: `#6aaa64` (bright green emoji color)
+- Beginner: `#b59f3b` (yellow - 🟨)
+- Intermediate: `#538d4e` (green - 🟢)
+- Advanced: `#6aaa64` (bright green - 💪)
+- Elite: `#e67e22` (orange - 🔥)
+- Champion: `#ffd700` (gold - 🏆)
 
 **Text Contrast:**
 - Muted text: `#999a9c` (improved to WCAG AA standards, ~5.1:1 ratio)
