@@ -175,27 +175,33 @@ class PlankClub {
         return dateData.reduce((sum, seconds) => sum + seconds, 0);
     }
 
+    // Get max plank duration for a date (longest individual plank)
+    getMaxPlankDuration(dateData) {
+        if (!dateData || !Array.isArray(dateData) || dateData.length === 0) return 0;
+        return Math.max(...dateData);
+    }
+
     // Get block class based on plank time
     getBlockClass(dateData) {
-        const totalSeconds = this.getTotalSeconds(dateData);
-        if (totalSeconds === 0) return 'block-empty';
-        if (totalSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
-        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
+        const maxSeconds = this.getMaxPlankDuration(dateData);
+        if (maxSeconds === 0) return 'block-empty';
+        if (maxSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
+        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
         return 'block-advanced';
     }
 
     // Get emoji for sharing based on plank time
     getBlockEmoji(dateData, currentStreak = 0) {
-        const totalSeconds = this.getTotalSeconds(dateData);
-        if (totalSeconds === 0) return '⬜';
+        const maxSeconds = this.getMaxPlankDuration(dateData);
+        if (maxSeconds === 0) return '⬜';
 
         // 14+ day streak earns stars for completed days
-        if (currentStreak >= 14 && totalSeconds > 0) {
+        if (currentStreak >= 14 && maxSeconds > 0) {
             return '⭐';
         }
 
-        if (totalSeconds < CONFIG.BEGINNER_MAX) return '🟨';
-        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
+        if (maxSeconds < CONFIG.BEGINNER_MAX) return '🟨';
+        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
         return '🟢';
     }
 
