@@ -5,8 +5,10 @@
 const CONFIG = {
     DISPLAY_DAYS: 28,           // Days to show in progress grid
     SHARE_DAYS: 7,              // Days to include in share text
-    BEGINNER_MAX: 30,           // Max seconds for beginner level
-    INTERMEDIATE_MAX: 60,       // Max seconds for intermediate level
+    BEGINNER_MAX: 30,           // Max seconds for beginner level (0-29s)
+    INTERMEDIATE_MAX: 60,       // Max seconds for intermediate level (30-59s)
+    ADVANCED_MAX: 90,           // Max seconds for advanced level (60-89s)
+    ELITE_MAX: 120,             // Max seconds for elite level (90-119s)
     TIMER_MIN_PLANKS: 1,        // Min number of planks in timer
     TIMER_MAX_PLANKS: 10,       // Max number of planks in timer
     PLANK_MIN_DURATION: 10,     // Min plank duration in seconds
@@ -187,7 +189,9 @@ class PlankClub {
         if (maxSeconds === 0) return 'block-empty';
         if (maxSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
         if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
-        return 'block-advanced';
+        if (maxSeconds < CONFIG.ADVANCED_MAX) return 'block-advanced';
+        if (maxSeconds < CONFIG.ELITE_MAX) return 'block-elite';
+        return 'block-champion';
     }
 
     // Get emoji for sharing based on plank time
@@ -201,8 +205,10 @@ class PlankClub {
         }
 
         if (maxSeconds < CONFIG.BEGINNER_MAX) return '🟨';
-        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
-        return '🟢';
+        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return '🟢';
+        if (maxSeconds < CONFIG.ADVANCED_MAX) return '💪';
+        if (maxSeconds < CONFIG.ELITE_MAX) return '🔥';
+        return '🏆';
     }
 
     // Load timer preferences from localStorage
@@ -452,6 +458,8 @@ class PlankClub {
         let beginnerCount = 0;
         let intermediateCount = 0;
         let advancedCount = 0;
+        let eliteCount = 0;
+        let championCount = 0;
 
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
@@ -461,8 +469,12 @@ class PlankClub {
                         beginnerCount++;
                     } else if (seconds < CONFIG.INTERMEDIATE_MAX) {
                         intermediateCount++;
-                    } else {
+                    } else if (seconds < CONFIG.ADVANCED_MAX) {
                         advancedCount++;
+                    } else if (seconds < CONFIG.ELITE_MAX) {
+                        eliteCount++;
+                    } else {
+                        championCount++;
                     }
                 }
             }
@@ -473,6 +485,8 @@ class PlankClub {
         document.getElementById('beginnerCount').textContent = beginnerCount;
         document.getElementById('intermediateCount').textContent = intermediateCount;
         document.getElementById('advancedCount').textContent = advancedCount;
+        document.getElementById('eliteCount').textContent = eliteCount;
+        document.getElementById('championCount').textContent = championCount;
         document.getElementById('totalPlanks').textContent = totalPlanks;
     }
 

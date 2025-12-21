@@ -16,11 +16,13 @@ Track and share your daily plank exercises with friends, Wordle-style!
 ### Progress Tracking
 - 📊 Track multiple planks per day with individual durations
 - 📅 Visual progress grid showing your last 28 days
-- 🟩 Color-coded blocks (like Wordle):
+- 🏆 Color-coded blocks (like Wordle):
   - ⬜ No plank
-  - 🟨 < 30 seconds
-  - 🟩 30-60 seconds
-  - 🟢 60+ seconds
+  - 🟨 Beginner (< 30 seconds)
+  - 🟢 Intermediate (30-60 seconds)
+  - 💪 Advanced (60-90 seconds)
+  - 🔥 Elite (90-120 seconds)
+  - 🏆 Champion (120+ seconds)
 - 📈 Stats: current streak, best streak, planks by category
 
 ### Sharing
@@ -57,7 +59,7 @@ Click WhatsApp or Copy button to share your weekly emoji grid!
 💪 Plank Club
 Week 47 2025
 
-⬜🟨🟩🟢🟩🟨🟩
+⬜🟨🟢💪🔥🏆💪
 
 📅 Today: 3 planks (180s)
 🔥 Streak: 5 | Total Planks: 42
