@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#121213">
+    <title>Plank Club 💪</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💪 Plank Club</h1>
+            <p class="subtitle">Track your daily planks, share your progress</p>
+        </header>
+
+        <main>
+            <!-- Timer Section -->
+            <section class="timer-section">
+                <h2>⏱️ Plank Timer</h2>
+                <div class="timer-setup">
+                    <div class="timer-input-group timer-input-full">
+                        <label for="timerCount">Number of Planks:</label>
+                        <input type="number" id="timerCount" min="1" max="10" value="3">
+                    </div>
+                    <div class="timer-input-row">
+                        <div class="timer-input-group">
+                            <label for="timerDuration">Duration (s):</label>
+                            <input type="number" id="timerDuration" min="10" max="600" value="60">
+                        </div>
+                        <div class="timer-input-group">
+                            <label for="restDuration">Rest (s):</label>
+                            <input type="number" id="restDuration" min="5" max="180" value="30">
+                        </div>
+                    </div>
+                </div>
+                <div class="timer-display">
+                    <div class="timer-start-time" id="timerStartTime"></div>
+                    <div class="timer-status" id="timerStatus">Ready to start</div>
+                    <div class="timer-time" id="timerTime">00:00</div>
+                    <div class="timer-progress" id="timerProgress">Plank 0 of 0</div>
+                </div>
+                <div class="timer-controls">
+                    <button id="startTimerBtn" class="btn-timer btn-start">▶️ Start Timer</button>
+                    <button id="pauseTimerBtn" class="btn-timer btn-pause" style="display: none;">⏸️ Pause</button>
+                    <button id="stopTimerBtn" class="btn-timer btn-stop" style="display: none;">⏹️ Stop</button>
+                </div>
+                <div id="timerMessage" class="timer-message"></div>
+            </section>
+
+            <!-- Today's Plank Entry -->
+            <section class="today-section">
+                <h2>Add a Plank</h2>
+                <div class="input-group">
+                    <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999">
+                    <input type="number" id="plankCount" placeholder="Count" min="1" max="99" value="1">
+                    <button id="submitBtn" class="btn-primary">Log Plank</button>
+                </div>
+                <div id="todayStatus" class="status-message"></div>
+            </section>
+
+            <!-- Progress Grid -->
+            <section class="progress-section">
+                <h2>Your Progress</h2>
+                <div id="progressGrid" class="progress-grid"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="block block-empty"></span>
+                        <span>No plank</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-beginner"></span>
+                        <span>&lt; 30s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-intermediate"></span>
+                        <span>30-60s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-advanced"></span>
+                        <span>60s+</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats -->
+            <section class="stats-section">
+                <div class="stats-header">
+                    <h2>Stats</h2>
+                    <button id="settingsBtn" class="btn-settings" title="Settings">⚙️</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="currentStreak">0</div>
+                        <div class="stat-label">Current Streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maxStreak">0</div>
+                        <div class="stat-label">Best Streak</div>
+                    </div>
+                    <div class="stat-card stat-card-beginner">
+                        <div class="stat-value" id="beginnerCount">0</div>
+                        <div class="stat-label">🟨 Beginner (&lt;30s)</div>
+                    </div>
+                    <div class="stat-card stat-card-intermediate">
+                        <div class="stat-value" id="intermediateCount">0</div>
+                        <div class="stat-label">🟩 Intermediate (30-60s)</div>
+                    </div>
+                    <div class="stat-card stat-card-advanced">
+                        <div class="stat-value" id="advancedCount">0</div>
+                        <div class="stat-label">🟢 Advanced (60s+)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalPlanks">0</div>
+                        <div class="stat-label">Total Planks</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Share -->
+            <section class="share-section">
+                <div class="share-buttons">
+                    <button id="whatsappBtn" class="btn-whatsapp">💬 Share to WhatsApp</button>
+                    <button id="shareBtn" class="btn-share">📋 Copy to Clipboard</button>
+                </div>
+                <div id="shareMessage" class="share-message"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>All data stored locally in your browser</p>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Settings</h2>
+            <div class="settings-option">
+                <h3>Clear Stats</h3>
+                <p class="option-description">Remove plank data from your history</p>
+                <div class="clear-stats-controls">
+                    <label for="clearDays">Clear last:</label>
+                    <input type="number" id="clearDays" min="1" max="365" value="7">
+                    <span>days</span>
+                </div>
+                <button id="clearStatsBtn" class="btn-danger">Clear Data</button>
+            </div>
+            <button id="closeModalBtn" class="btn-secondary">Close</button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Confirm Clear Data</h2>
+            <p id="confirmMessage" class="confirm-message"></p>
+            <div class="modal-actions">
+                <button id="confirmYesBtn" class="btn-danger">Yes, Clear Data</button>
+                <button id="confirmNoBtn" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
