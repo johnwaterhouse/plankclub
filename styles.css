@@ -587,6 +587,22 @@ footer {
     border-top: 1px solid var(--bg-tertiary);
 }
 
+.coffee-link {
+    display: inline-block;
+    margin-top: 10px;
+    text-decoration: none;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.coffee-link:hover {
+    opacity: 1;
+}
+
+.coffee-icon {
+    font-size: 1.2em;
+}
+
 /* Modal Styles */
 .modal {
     position: fixed;

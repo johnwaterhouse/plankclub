@@ -358,6 +358,66 @@ localStorage.getItem('timerPreferences')  // View timer settings
 localStorage.clear()  // Clear everything
 ```
 
+## Deployment Guidelines
+
+### Current Setup: GitHub → Vercel Auto-Deploy
+
+**Repository**: Private GitHub repo (`johnwaterhouse/plankclub`)  
+**Platform**: Vercel (auto-deploy on push to main)  
+**Build**: No build process (static files)  
+
+### Pre-Deployment Checklist
+```bash
+# 1. Ensure tests pass
+npm test
+
+# 2. Check mobile layout
+# Test at 500px breakpoint in DevTools
+
+# 3. Verify offline functionality
+# Disconnect network and test app
+
+# 4. Check console for errors
+# Open DevTools and verify no errors
+```
+
+### Security Headers (TODO)
+```json
+// vercel.json (recommended for security)
+{
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options", 
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Deployment Workflow
+1. **Commit to main branch** → Vercel auto-deploys to production
+2. **Feature branches** → Create PR → Vercel creates deploy preview
+3. **Rollback** → Use Vercel dashboard to revert deployments
+
 ### Common Git Workflow
 ```bash
 # Check status

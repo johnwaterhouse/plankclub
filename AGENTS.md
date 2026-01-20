@@ -35,139 +35,141 @@ npx vitest --grep "should save plank data"
 ## Code Style Guidelines
 
 ### JavaScript Conventions
-
-#### Modules and Imports
-- Use ES6 modules (`"type": "module"` in package.json)
-- Import statements at the top of files
-- Use named exports for utilities, default export for main classes
-
-#### Code Structure
-- **Single class architecture**: Main `PlankClub` class in `app.js` contains all functionality
-- **Configuration object**: All magic numbers centralized in `CONFIG` constant
-- **Constants first**: Place all configuration and message constants at the top of files
-- **Method grouping**: Organize related methods together (data layer, timer, UI, etc.)
+- **ES6 modules** (`"type": "module"`) with imports at file top
+- **Single class architecture**: Main `PlankClub` class in `app.js`
+- **Configuration object**: All magic numbers in `CONFIG` constant
+- **Constants first**: Configuration and message constants at file top
+- **Method grouping**: Organize by functionality (data layer, timer, UI)
 
 #### Naming Conventions
 - **Classes**: PascalCase (`PlankClub`)
-- **Methods**: camelCase with descriptive verbs (`loadData()`, `startTimer()`)
-- **Variables**: camelCase, meaningful names (`currentPlank`, `timeRemaining`)
-- **Constants**: UPPER_SNAKE_CASE for configuration (`DISPLAY_DAYS`, `BEEP_FREQUENCY`)
-- **CSS Classes**: kebab-case with BEM-like naming (`.timer-section`, `.progress-grid`)
+- **Methods/Variables**: camelCase (`loadData()`, `currentPlank`)
+- **Constants**: UPPER_SNAKE_CASE (`DISPLAY_DAYS`, `BEEP_FREQUENCY`)
+- **CSS Classes**: kebab-case with BEM (`.timer-section`, `.progress-grid`)
 
 #### Error Handling
-- **Always wrap localStorage operations** in try-catch blocks
-- **Wrap all DOM manipulations** in try-catch for optional APIs
-- **Handle browser API availability** with feature detection and graceful fallbacks
-- **Use descriptive error messages** with context
-
-#### Time and Date Handling
-- **Always use local timezone** - never UTC
-- **Use YYYY-MM-DD format** for localStorage keys
-- **Store durations in seconds**, convert to display format only when needed
+- **localStorage operations**: Always wrapped in try-catch
+- **DOM manipulations**: Wrapped in try-catch for optional APIs
+- **Browser APIs**: Feature detection with graceful fallbacks
+- **Time/Date**: Local timezone, YYYY-MM-DD format, durations in seconds
 
 ### CSS Conventions
-
-#### CSS Variables
-- **36 CSS custom properties** defined in `:root` for consistent theming
-- **Semantic naming**: `--bg-primary`, `--text-secondary`, `--color-success`
-- **Group related variables**: Background colors, text colors, accent colors together
-
-#### Responsive Design
-- **Mobile-first approach** with breakpoint at 500px
-- **Touch targets minimum 44px** (WCAG compliance)
-- **iOS-specific optimization**: `font-size: 16px` to prevent zoom on input focus
-
-#### Class Naming
-- **BEM-like patterns**: `.component-name`, `.component-name__element`, `.component-name--modifier`
-- **Descriptive names**: `.stat-card`, `.progress-grid`, `.timer-section`
-- **State classes**: `.active`, `.paused`, `.completed`
+- **CSS Variables**: 36+ custom properties in `:root` with semantic naming
+- **Responsive**: Mobile-first, 500px breakpoint, 44px minimum touch targets
+- **iOS Optimization**: `font-size: 16px` on inputs to prevent zoom
+- **BEM Patterns**: `.component-name`, `.component-name__element`, `.component-name--modifier`
+- **State Classes**: `.active`, `.paused`, `.completed`
 
 ### File Organization
-
-#### Main Application Files
 ```
 plankclub/
-├── app.js              # Main application logic (PlankClub class)
-├── index.html          # Single HTML file with semantic structure
+├── app.js              # Main PlankClub class
+├── index.html          # Single HTML file
 ├── styles.css          # Complete CSS with variables
-├── package.json        # ES6 modules, testing configuration
-└── README.md           # User-facing documentation
-```
-
-#### Testing Structure
-```
-tests/
-├── setup.js           # Comprehensive mocks for browser APIs
-├── unit/
-│   └── data-layer.test.js  # Data layer tests
-└── fixtures/
-    ├── sample-data.js      # Test data generators
-    └── dom-fixtures.js     # DOM setup utilities
+├── package.json        # ES6 modules, testing config
+├── tests/
+│   ├── setup.js        # Browser API mocks
+│   ├── unit/           # Unit tests
+│   └── fixtures/       # Test data/utilities
+└── README.md           # User documentation
 ```
 
 ## Testing Guidelines
-
-### Test Environment
-- **Vitest** with **happy-dom** for DOM mocking
-- **Coverage thresholds**: 80% statements/lines/functions, 75% branches
-- **Test timeout**: 10 seconds
-- **Mocks**: LocalStorage, AudioContext, Wake Lock API, Clipboard API
-
-### Test Writing Patterns
+- **Vitest + happy-dom** with 80% coverage thresholds (75% branches)
+- **Mock-heavy approach** for all browser APIs (LocalStorage, AudioContext, etc.)
 - **Unit tests** focus on business logic and data layer
-- **Mock-heavy approach** for all browser APIs
-- **Comprehensive fixtures** for various data scenarios
-- **Arrange-Act-Assert** pattern consistently
-- **Descriptive test names** that explain the behavior
-
-### Before Writing New Tests
-1. Check `tests/fixtures/` for existing data generators
-2. Review `tests/setup.js` for available mocks
-3. Follow existing test patterns in `tests/unit/`
+- **Arrange-Act-Assert** pattern with descriptive test names
+- **Test fixtures**: Use `tests/fixtures/` for data generators
+- **Setup**: Check `tests/setup.js` for available mocks before writing new tests
 
 ## Development Best Practices
-
-### State Management
-- **Single source of truth**: `PlankClub` class manages all state
-- **Data persistence**: localStorage with YYYY-MM-DD keys mapping to plank duration arrays
-- **Event-driven architecture**: DOM event listeners trigger class methods
-
-### Browser API Usage
-- **Feature detection required** before using optional APIs
-- **Graceful degradation** for unsupported features
-- **Memory management**: Shared AudioContext to prevent leaks
-- **Wake lock**: Request and manage properly with error handling
-
-### Mobile Optimization
-- **Touch-friendly interface** with proper tap targets
-- **Responsive design** optimized for phones and tablets
-- **Full-screen capabilities** enabled for app-like experience
-- **Offline-first functionality** - works without internet connection
+- **State Management**: Single source of truth in `PlankClub` class, localStorage with YYYY-MM-DD keys
+- **Browser APIs**: Feature detection, graceful degradation, shared AudioContext, proper wake lock handling
+- **Mobile**: Touch-friendly, responsive, full-screen capable, offline-first
+- **Event-driven**: DOM listeners trigger class methods
 
 ## Code Review Checklist
+- localStorage operations wrapped in try-catch
+- Browser APIs checked for availability before use
+- Configuration values from `CONFIG` object
+- CSS variables instead of hardcoded values
+- Mobile-first responsive design
+- Tests written for new functionality
+- Descriptive error messages
+- Existing patterns and naming conventions followed
 
-- [ ] All localStorage operations wrapped in try-catch
-- [ ] Browser APIs checked for availability before use
-- [ ] Configuration values pulled from `CONFIG` object
-- [ ] CSS variables used instead of hardcoded values
-- [ ] Mobile-first responsive design considered
-- [ ] Tests written for new functionality
-- [ ] Error messages are descriptive and user-friendly
-- [ ] Code follows existing patterns and naming conventions
-- [ ] Documentation updated if needed
+## Deployment Guidelines
 
-## Debugging and Development
+### Current Setup: GitHub → Vercel Auto-Deploy
 
-### Common Issues
-- **LocalStorage quota exceeded** - handle gracefully with user notification
-- **Audio context not supported** - provide visual feedback instead
-- **Wake lock not available** - continue without it, no blocking
-- **iOS zoom on focus** - ensure 16px font size on inputs
+**Repository**: Private GitHub repo (`johnwaterhouse/plankclub`)  
+**Platform**: Vercel (auto-deploy on push to main)  
+**Build**: No build process (static files)  
 
-### Development Tools
-- **VS Code settings** configured for Vitest integration
-- **Git hooks** ensure test quality
-- **Coverage reports** help maintain test standards
-- **Comprehensive logging** for debugging state changes
+### Pre-Deployment Checklist
+```bash
+# 1. Ensure tests pass
+npm test
 
-This guide ensures consistency and quality across all development activities in the Plank Club codebase.
+# 2. Check mobile layout
+# Test at 500px breakpoint in DevTools
+
+# 3. Verify offline functionality
+# Disconnect network and test app
+
+# 4. Check console for errors
+# Open DevTools and verify no errors
+```
+
+### Security Headers (TODO)
+```json
+// vercel.json (recommended for security)
+{
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options", 
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Deployment Workflow
+1. **Commit to main branch** → Vercel auto-deploys to production
+2. **Feature branches** → Create PR → Vercel creates deploy preview
+3. **Rollback** → Use Vercel dashboard to revert deployments
+
+### Local Development
+```bash
+# Direct file access
+open index.html
+
+# Or local server
+python -m http.server 8000
+```
+
+## Common Issues & Debugging
+- **LocalStorage quota**: Handle gracefully with user notification
+- **Audio context**: Provide visual feedback if not supported
+- **Wake lock**: Continue without it if unavailable
+- **iOS zoom**: Ensure 16px font size on inputs
+- **Tools**: VS Code Vitest integration, git hooks, coverage reports
