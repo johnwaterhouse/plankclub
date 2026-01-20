@@ -108,6 +108,14 @@ class PlankClub {
         return `${year}-${month}-${day}`;
     }
 
+    // Format any Date object as YYYY-MM-DD (local timezone)
+    formatDateAsKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     // Format date for display (e.g., "Nov 13")
     formatDateDisplay(dateStr) {
         const date = new Date(dateStr + 'T00:00:00');
@@ -327,7 +335,7 @@ class PlankClub {
         let date = new Date();
 
         while (true) {
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = this.formatDateAsKey(date);
             const dateData = this.data[dateStr];
             if (dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0) {
                 streak++;
@@ -789,6 +797,16 @@ class PlankClub {
     }
 
     logTimedPlanks() {
+        // Guard against race conditions - don't log if timer is still running
+        if (this.timerState !== 'idle' && this.timerState !== 'paused') {
+            console.warn('Timer still running, cannot log planks');
+            return;
+        }
+
+        // Capture planks to log before any async operations
+        const planksToLog = [...this.completedPlanks];
+        if (planksToLog.length === 0) return;
+
         const today = this.getTodayDate();
 
         if (!this.data[today]) {
@@ -796,11 +814,11 @@ class PlankClub {
         }
 
         // Add all completed planks
-        this.data[today].push(...this.completedPlanks);
+        this.data[today].push(...planksToLog);
         this.saveData();
 
         const total = this.getTotalSeconds(this.data[today]);
-        this.showTimerMessage(`✅ ${this.completedPlanks.length} plank${this.completedPlanks.length > 1 ? 's' : ''} logged! (Total today: ${total}s)`, 'success');
+        this.showTimerMessage(`✅ ${planksToLog.length} plank${planksToLog.length > 1 ? 's' : ''} logged! (Total today: ${total}s)`, 'success');
 
         // Refresh UI
         this.renderProgressGrid();
@@ -942,7 +960,7 @@ class PlankClub {
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = this.formatDateAsKey(date);
             if (this.data[dateStr] && this.data[dateStr].length > 0) {
                 affectedDays++;
             }
@@ -970,7 +988,7 @@ class PlankClub {
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = this.formatDateAsKey(date);
             if (this.data[dateStr]) {
                 delete this.data[dateStr];
                 clearedDays++;
