@@ -154,6 +154,43 @@ input[type="number"]:focus {
     color: #f38ba8;
 }
 
+/* Use Life Notification */
+.use-life-notification {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: rgba(231, 76, 60, 0.15);
+    border: 2px solid #e74c3c;
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.use-life-message {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.btn-use-life {
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-use-life:hover {
+    background-color: #c0392b;
+}
+
+.btn-use-life:active {
+    transform: scale(0.98);
+}
+
 /* Timer Section */
 .timer-section {
     background-color: var(--bg-secondary);
@@ -447,6 +484,13 @@ input[type="number"]:focus {
     color: #121213;
 }
 
+.block-life {
+    background-color: rgba(231, 76, 60, 0.3);
+    border: 2px solid #e74c3c;
+    color: #e74c3c;
+    font-size: 1.5em;
+}
+
 .block-today {
     border: 2px solid #ffffff;
     animation: pulse 2s infinite;
@@ -571,6 +615,20 @@ input[type="number"]:focus {
 
 .stat-card-champion .stat-value {
     color: var(--color-champion);
+}
+
+.stat-card-lives {
+    border-color: #e74c3c;
+}
+
+.stat-card-lives .stat-value {
+    color: #e74c3c;
+}
+
+.stat-sublabel {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin-top: 5px;
 }
 
 .stat-value {

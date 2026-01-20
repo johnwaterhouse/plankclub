@@ -23,13 +23,31 @@ const CONFIG = {
     BEEP_DURATION: 0.5,         // Beep duration in seconds
     BEEP_VOLUME: 0.3,           // Beep volume (0-1)
     MESSAGE_TIMEOUT: 3000,      // Status message timeout in ms
-    SHARE_DELAY: 1000           // Delay before share prompt in ms
+    SHARE_DELAY: 1000,          // Delay before share prompt in ms
+    // Milestone configurations
+    STREAK_MILESTONES: [21, 30, 60, 100], // Streak milestones to celebrate
+    MILESTONE_ICONS: {
+        21: '🔥',
+        30: '💎',
+        60: '🏅',
+        100: '👑'
+    },
+    MILESTONE_NAMES: {
+        21: 'Three-Week Legend',
+        30: 'Month Master',
+        60: 'Two-Month Hero',
+        100: 'Century Club'
+    },
+    // Life system configuration
+    PLANKS_PER_LIFE: 50         // Number of planks needed to earn one life
 };
 
 class PlankClub {
     constructor() {
         this.storageKey = 'plankClubData';
+        this.livesKey = 'plankClubLives';
         this.data = this.loadData();
+        this.lives = this.loadLives();
 
         // Timer state
         this.timerInterval = null;
@@ -69,6 +87,7 @@ class PlankClub {
         this.updateStats();
         this.setupEventListeners();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
         this.setupVisibilityListener();
         this.loadTimerPreferences();
         this.setView('setup'); // Start in setup view
@@ -99,6 +118,64 @@ class PlankClub {
     // Save data to localStorage
     saveData() {
         localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+    }
+
+    // Load lives data from localStorage
+    loadLives() {
+        const stored = localStorage.getItem(this.livesKey);
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch (e) {
+                console.error('Failed to load lives data:', e);
+            }
+        }
+        return { usedLives: [] }; // Array of dates where lives were used
+    }
+
+    // Save lives data to localStorage
+    saveLives() {
+        try {
+            localStorage.setItem(this.livesKey, JSON.stringify(this.lives));
+        } catch (e) {
+            console.error('Failed to save lives data:', e);
+        }
+    }
+
+    // Calculate total available lives (earned from total planks)
+    getAvailableLives() {
+        let totalPlanks = 0;
+        for (const dateData of Object.values(this.data)) {
+            if (Array.isArray(dateData)) {
+                totalPlanks += dateData.length;
+            }
+        }
+        return Math.floor(totalPlanks / CONFIG.PLANKS_PER_LIFE);
+    }
+
+    // Get number of lives used
+    getUsedLivesCount() {
+        return this.lives.usedLives.length;
+    }
+
+    // Get remaining lives
+    getRemainingLives() {
+        return Math.max(0, this.getAvailableLives() - this.getUsedLivesCount());
+    }
+
+    // Check if a life was used on a specific date
+    hasLifeUsed(dateStr) {
+        return this.lives.usedLives.includes(dateStr);
+    }
+
+    // Use a life for a specific date
+    useLife(dateStr) {
+        if (!this.hasLifeUsed(dateStr) && this.getRemainingLives() > 0) {
+            this.lives.usedLives.push(dateStr);
+            this.saveLives();
+            return true;
+        }
+        return false;
     }
 
     // Load personal best for failure mode
@@ -195,7 +272,12 @@ class PlankClub {
     }
 
     // Get emoji for sharing based on plank time
-    getBlockEmoji(dateData, currentStreak = 0) {
+    getBlockEmoji(dateData, currentStreak = 0, hasLife = false) {
+        // Life used takes priority over empty
+        if (hasLife) {
+            return '❤️';
+        }
+
         const maxSeconds = this.getMaxPlankDuration(dateData);
         if (maxSeconds === 0) return '⬜';
 
@@ -245,6 +327,7 @@ class PlankClub {
         });
         document.getElementById('shareBtn').addEventListener('click', () => this.shareProgress());
         document.getElementById('whatsappBtn').addEventListener('click', () => this.shareToWhatsApp());
+        document.getElementById('useLifeBtn').addEventListener('click', () => this.handleUseLife());
 
         // Timer event listeners
         document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
@@ -347,6 +430,7 @@ class PlankClub {
         this.renderProgressGrid();
         this.updateStats();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
 
         // Clear time input but keep count
         timeInput.value = '';
@@ -368,7 +452,8 @@ class PlankClub {
         for (let i = daysToShow - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
-            const blockClass = this.getBlockClass(dateData);
+            const hasLife = this.hasLifeUsed(date);
+            const blockClass = hasLife ? 'block-life' : this.getBlockClass(dateData);
 
             const block = document.createElement('div');
             block.className = `block ${blockClass}`;
@@ -381,14 +466,18 @@ class PlankClub {
             const displayDate = this.formatDateDisplay(date);
             const totalSeconds = this.getTotalSeconds(dateData);
             let timeText = 'No plank';
-            if (dateData.length > 0) {
+            if (hasLife) {
+                timeText = 'Life used ❤️';
+            } else if (dateData.length > 0) {
                 const planksList = dateData.map((s, i) => `#${i + 1}: ${s}s`).join(', ');
                 timeText = `${dateData.length} plank${dateData.length > 1 ? 's' : ''} (${planksList}) - Total: ${totalSeconds}s`;
             }
             block.title = `${displayDate}: ${timeText}`;
 
-            // Show total seconds in the block
-            if (totalSeconds > 0) {
+            // Show content in the block
+            if (hasLife) {
+                block.textContent = '❤️';
+            } else if (totalSeconds > 0) {
                 block.textContent = totalSeconds;
             }
 
@@ -396,7 +485,7 @@ class PlankClub {
         }
     }
 
-    // Calculate current streak
+    // Calculate current streak (accounting for lives used)
     calculateCurrentStreak() {
         let streak = 0;
         let date = new Date();
@@ -404,7 +493,10 @@ class PlankClub {
         while (true) {
             const dateStr = date.toISOString().split('T')[0];
             const dateData = this.data[dateStr];
-            if (dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0) {
+            const hasPlank = dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0;
+            const hasLife = this.hasLifeUsed(dateStr);
+
+            if (hasPlank || hasLife) {
                 streak++;
                 date.setDate(date.getDate() - 1);
             } else {
@@ -415,18 +507,28 @@ class PlankClub {
         return streak;
     }
 
-    // Calculate max streak
+    // Calculate max streak (accounting for lives used)
     calculateMaxStreak() {
-        const dates = Object.keys(this.data).sort();
-        if (dates.length === 0) return 0;
+        // Get all dates (both with planks and with lives)
+        const allDates = new Set([
+            ...Object.keys(this.data),
+            ...this.lives.usedLives
+        ]);
+
+        if (allDates.size === 0) return 0;
+
+        const sortedDates = Array.from(allDates).sort();
 
         let maxStreak = 0;
         let currentStreak = 0;
         let prevDate = null;
 
-        for (const dateStr of dates) {
+        for (const dateStr of sortedDates) {
             const dateData = this.data[dateStr];
-            if (dateData && Array.isArray(dateData) && this.getTotalSeconds(dateData) > 0) {
+            const hasPlank = dateData && Array.isArray(dateData) && this.getTotalSeconds(dateData) > 0;
+            const hasLife = this.hasLifeUsed(dateStr);
+
+            if (hasPlank || hasLife) {
                 if (prevDate === null) {
                     currentStreak = 1;
                 } else {
@@ -488,6 +590,69 @@ class PlankClub {
         document.getElementById('eliteCount').textContent = eliteCount;
         document.getElementById('championCount').textContent = championCount;
         document.getElementById('totalPlanks').textContent = totalPlanks;
+
+        // Update lives information
+        const availableLives = this.getAvailableLives();
+        const usedLives = this.getUsedLivesCount();
+        const remainingLives = this.getRemainingLives();
+        document.getElementById('livesRemaining').textContent = remainingLives;
+        document.getElementById('livesInfo').textContent = `${usedLives}/${availableLives} used`;
+    }
+
+    // Check if user is eligible to use a life (yesterday was missed)
+    checkUseLifeEligibility() {
+        const yesterday = this.getDateDaysAgo(1);
+        const yesterdayData = this.data[yesterday] || [];
+        const hasYesterdayPlank = yesterdayData.length > 0 && this.getTotalSeconds(yesterdayData) > 0;
+        const hasYesterdayLife = this.hasLifeUsed(yesterday);
+        const remainingLives = this.getRemainingLives();
+
+        const notification = document.getElementById('useLifeNotification');
+
+        // Show notification if yesterday was missed and user has lives available
+        if (!hasYesterdayPlank && !hasYesterdayLife && remainingLives > 0) {
+            notification.style.display = 'block';
+        } else {
+            notification.style.display = 'none';
+        }
+    }
+
+    // Handle use life button click
+    handleUseLife() {
+        const yesterday = this.getDateDaysAgo(1);
+        const remainingLives = this.getRemainingLives();
+
+        if (remainingLives <= 0) {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ No lives available! Complete 50 planks to earn a life.';
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+            return;
+        }
+
+        if (this.useLife(yesterday)) {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message success';
+            statusDiv.textContent = `✅ Life used for ${this.formatDateDisplay(yesterday)}! Streak preserved! ❤️`;
+
+            // Refresh UI
+            this.renderProgressGrid();
+            this.updateStats();
+            this.checkUseLifeEligibility();
+
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+        } else {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ Could not use life. You may have already used one for this day.';
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+        }
     }
 
     // Generate share text (Wordle-style)
@@ -503,13 +668,23 @@ class PlankClub {
 
         // Calculate streak first (needed for star badge)
         const currentStreak = this.calculateCurrentStreak();
+        const livesUsed = this.getUsedLivesCount();
+
+        // Check for milestone
+        let milestone = null;
+        for (const ms of CONFIG.STREAK_MILESTONES) {
+            if (currentStreak >= ms) {
+                milestone = ms;
+            }
+        }
 
         // Build grid
         let grid = '';
         for (let i = daysToShare - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
-            const emoji = this.getBlockEmoji(dateData, currentStreak);
+            const hasLife = this.hasLifeUsed(date);
+            const emoji = this.getBlockEmoji(dateData, currentStreak, hasLife);
             grid += emoji;
         }
 
@@ -523,11 +698,23 @@ class PlankClub {
 
         if (miniShare) {
             // Mini format: compact single-line stats
-            return `💪 Plank Club W${weekNumber}\n${grid}\n🔥 ${currentStreak} streak | ${totalPlanks} total`;
+            let streakText = `${currentStreak} streak`;
+            if (livesUsed > 0) {
+                streakText += ` (${livesUsed} ❤️)`;
+            }
+            return `💪 Plank Club W${weekNumber}\n${grid}\n🔥 ${streakText} | ${totalPlanks} total`;
         }
 
         // Normal format (without link)
         let shareText = '💪 Plank Club\n';
+
+        // Add milestone banner if applicable
+        if (milestone) {
+            const icon = CONFIG.MILESTONE_ICONS[milestone];
+            const name = CONFIG.MILESTONE_NAMES[milestone];
+            shareText += `${icon} ${milestone} DAY STREAK - ${name.toUpperCase()}! ${icon}\n`;
+        }
+
         shareText += `Week ${weekNumber} ${weekYear}\n\n`;
         shareText += grid;
         shareText += '\n\n';
@@ -541,7 +728,12 @@ class PlankClub {
             shareText += `📅 Today: ${todayPlanks} plank${todayPlanks > 1 ? 's' : ''} (${todayTotal}s)\n`;
         }
 
-        shareText += `🔥 Streak: ${currentStreak} | Total Planks: ${totalPlanks}`;
+        // Add lives info to streak if any used
+        let streakText = `🔥 Streak: ${currentStreak}`;
+        if (livesUsed > 0) {
+            streakText += ` (${livesUsed} life${livesUsed > 1 ? 'ves' : ''} used ❤️)`;
+        }
+        shareText += `${streakText} | Total Planks: ${totalPlanks}`;
 
         return shareText;
     }
@@ -1036,6 +1228,7 @@ class PlankClub {
         this.renderProgressGrid();
         this.updateStats();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
 
         // Reset completed planks
         this.completedPlanks = [];

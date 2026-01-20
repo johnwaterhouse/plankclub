@@ -67,6 +67,12 @@
                     <button id="submitBtn" class="btn-primary">Log Plank</button>
                 </div>
                 <div id="todayStatus" class="status-message"></div>
+                <div id="useLifeNotification" class="use-life-notification" style="display: none;">
+                    <div class="use-life-message">
+                        💔 Missed yesterday? Use a life to keep your streak! ❤️
+                    </div>
+                    <button id="useLifeBtn" class="btn-use-life">❤️ Use Life</button>
+                </div>
             </section>
 
             <!-- Progress Grid -->
@@ -97,6 +103,10 @@
                     <div class="legend-item">
                         <span class="block block-champion"></span>
                         <span>120s+</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-life">❤️</span>
+                        <span>Life used</span>
                     </div>
                 </div>
             </section>
@@ -139,6 +149,11 @@
                     <div class="stat-card">
                         <div class="stat-value" id="totalPlanks">0</div>
                         <div class="stat-label">Total Planks</div>
+                    </div>
+                    <div class="stat-card stat-card-lives">
+                        <div class="stat-value" id="livesRemaining">0</div>
+                        <div class="stat-label">❤️ Lives Available</div>
+                        <div class="stat-sublabel" id="livesInfo">0/0 used</div>
                     </div>
                 </div>
             </section>
