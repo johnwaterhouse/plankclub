@@ -517,7 +517,7 @@ class PlankClub {
 
         if (allDates.size === 0) return 0;
 
-        const sortedDates = Array.from(allDates).sort();
+        const sortedDates = Array.from(allDates).sort((a, b) => a.localeCompare(b));
 
         let maxStreak = 0;
         let currentStreak = 0;
