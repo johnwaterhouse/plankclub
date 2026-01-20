@@ -670,6 +670,25 @@ footer {
     border-top: 1px solid var(--bg-tertiary);
 }
 
+.coffee-link {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 8px 16px;
+    color: var(--text-muted);
+    text-decoration: none;
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.coffee-link:hover {
+    color: var(--text-secondary);
+    background-color: var(--bg-tertiary);
+    border-color: var(--text-darker);
+    transform: translateY(-1px);
+}
+
 /* Modal Styles */
 .modal {
     position: fixed;
