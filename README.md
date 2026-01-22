@@ -23,7 +23,14 @@ Track and share your daily plank exercises with friends, Wordle-style!
   - 💪 Advanced (60-90 seconds)
   - 🔥 Elite (90-120 seconds)
   - 🏆 Champion (120+ seconds)
+  - ❤️ Life used (streak preserved)
 - 📈 Stats: current streak, best streak, planks by category
+
+### Lives System
+- ❤️ Earn 1 life for every 10 planks completed
+- Use lives to fill missed days and preserve your streak
+- Auto-notification when eligible to use a life
+- Lives displayed in stats (Available/Used)
 
 ### Sharing
 - 📤 Copy progress to clipboard
