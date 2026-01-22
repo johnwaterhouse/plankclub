@@ -102,8 +102,8 @@ plankclub/
 
 ### Current Setup: GitHub → Vercel Auto-Deploy
 
-**Repository**: Private GitHub repo (`johnwaterhouse/plankclub`)  
-**Platform**: Vercel (auto-deploy on push to main)  
+**Repository**: GitHub repo (`johnwaterhouse/plankclub`)
+**Platform**: Vercel (auto-deploy on push to main)
 **Build**: No build process (static files)  
 
 ### Pre-Deployment Checklist
