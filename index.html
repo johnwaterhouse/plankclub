@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <div class="container" data-view="setup">
         <header>
             <h1>💪 Plank Club</h1>
             <p class="subtitle">Track your daily planks, share your progress</p>
@@ -20,8 +20,8 @@
         <main>
             <!-- Timer Section -->
             <section class="timer-section">
-                <h2>⏱️ Plank Timer</h2>
-                <div class="timer-setup">
+                <h2 class="hide-on-timer-active">⏱️ Plank Timer</h2>
+                <div class="timer-setup hide-on-timer-active">
                     <div class="timer-input-group timer-input-full">
                         <label for="timerCount">Number of Planks:</label>
                         <input type="number" id="timerCount" min="1" max="10" value="3">
@@ -36,6 +36,12 @@
                             <input type="number" id="restDuration" min="5" max="180" value="30">
                         </div>
                     </div>
+                    <div class="timer-toggle-row">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="failureMode">
+                            <span class="toggle-text">💪 Plank to Failure</span>
+                        </label>
+                    </div>
                 </div>
                 <div class="timer-display">
                     <div class="timer-start-time" id="timerStartTime"></div>
@@ -45,6 +51,7 @@
                 </div>
                 <div class="timer-controls">
                     <button id="startTimerBtn" class="btn-timer btn-start">▶️ Start Timer</button>
+                    <button id="doneTimerBtn" class="btn-timer btn-done" style="display: none;">✓ Done</button>
                     <button id="pauseTimerBtn" class="btn-timer btn-pause" style="display: none;">⏸️ Pause</button>
                     <button id="stopTimerBtn" class="btn-timer btn-stop" style="display: none;">⏹️ Stop</button>
                 </div>
@@ -52,18 +59,24 @@
             </section>
 
             <!-- Today's Plank Entry -->
-            <section class="today-section">
+            <section class="today-section hide-on-timer-active">
                 <h2>Add a Plank</h2>
                 <div class="input-group">
-                    <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999">
+                    <input type="number" id="plankTime" placeholder="Seconds" min="0" max="999" value="60">
                     <input type="number" id="plankCount" placeholder="Count" min="1" max="99" value="1">
                     <button id="submitBtn" class="btn-primary">Log Plank</button>
                 </div>
                 <div id="todayStatus" class="status-message"></div>
+                <div id="useLifeNotification" class="use-life-notification" style="display: none;">
+                    <div class="use-life-message">
+                        💔 Missed yesterday? Use a life to keep your streak! ❤️
+                    </div>
+                    <button id="useLifeBtn" class="btn-use-life">❤️ Use Life</button>
+                </div>
             </section>
 
             <!-- Progress Grid -->
-            <section class="progress-section">
+            <section class="progress-section hide-on-timer-active">
                 <h2>Your Progress</h2>
                 <div id="progressGrid" class="progress-grid"></div>
                 <div class="legend">
@@ -81,13 +94,25 @@
                     </div>
                     <div class="legend-item">
                         <span class="block block-advanced"></span>
-                        <span>60s+</span>
+                        <span>60-90s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-elite"></span>
+                        <span>90-120s</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-champion"></span>
+                        <span>120s+</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="block block-life">❤️</span>
+                        <span>Life used</span>
                     </div>
                 </div>
             </section>
 
             <!-- Stats -->
-            <section class="stats-section">
+            <section class="stats-section hide-on-timer-active">
                 <div class="stats-header">
                     <h2>Stats</h2>
                     <button id="settingsBtn" class="btn-settings" title="Settings">⚙️</button>
@@ -107,21 +132,34 @@
                     </div>
                     <div class="stat-card stat-card-intermediate">
                         <div class="stat-value" id="intermediateCount">0</div>
-                        <div class="stat-label">🟩 Intermediate (30-60s)</div>
+                        <div class="stat-label">🟢 Intermediate (30-60s)</div>
                     </div>
                     <div class="stat-card stat-card-advanced">
                         <div class="stat-value" id="advancedCount">0</div>
-                        <div class="stat-label">🟢 Advanced (60s+)</div>
+                        <div class="stat-label">💪 Advanced (60-90s)</div>
+                    </div>
+                    <div class="stat-card stat-card-elite">
+                        <div class="stat-value" id="eliteCount">0</div>
+                        <div class="stat-label">🔥 Elite (90-120s)</div>
+                    </div>
+                    <div class="stat-card stat-card-champion">
+                        <div class="stat-value" id="championCount">0</div>
+                        <div class="stat-label">🏆 Champion (120s+)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value" id="totalPlanks">0</div>
                         <div class="stat-label">Total Planks</div>
                     </div>
+                    <div class="stat-card stat-card-lives">
+                        <div class="stat-value" id="livesRemaining">0</div>
+                        <div class="stat-label">❤️ Lives Available</div>
+                        <div class="stat-sublabel" id="livesInfo">0/0 used</div>
+                    </div>
                 </div>
             </section>
 
             <!-- Share -->
-            <section class="share-section">
+            <section class="share-section hide-on-timer-active">
                 <div class="share-buttons">
                     <button id="whatsappBtn" class="btn-whatsapp">💬 Share to WhatsApp</button>
                     <button id="shareBtn" class="btn-share">📋 Copy to Clipboard</button>
@@ -132,8 +170,8 @@
 
         <footer>
             <p>All data stored locally in your browser</p>
-            <a href="https://buymeacoffee.com/johnwaterhouse" target="_blank" rel="noopener noreferrer" class="coffee-link" title="Buy Me a Coffee">
-                <span class="coffee-icon">☕</span>
+            <a href="https://buymeacoffee.com/johnwaterhouse" target="_blank" rel="noopener noreferrer" class="coffee-link">
+                ☕ Buy me a coffee
             </a>
         </footer>
     </div>
@@ -142,6 +180,14 @@
     <div id="settingsModal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>Settings</h2>
+            <div class="settings-option">
+                <h3>Share Format</h3>
+                <p class="option-description">Choose how your progress is shared</p>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="miniShare">
+                    Mini Share (compact format)
+                </label>
+            </div>
             <div class="settings-option">
                 <h3>Clear Stats</h3>
                 <p class="option-description">Remove plank data from your history</p>
@@ -169,9 +215,5 @@
     </div>
 
     <script src="app.js"></script>
-    <script type="module">
-        import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@1/dist/index.mjs';
-        injectSpeedInsights();
-    </script>
 </body>
 </html>

@@ -24,6 +24,8 @@
     --color-beginner: #b59f3b;
     --color-intermediate: #538d4e;
     --color-advanced: #6aaa64;
+    --color-elite: #e67e22;
+    --color-champion: #ffd700;
 
     /* Other */
     --border-radius: 4px;
@@ -152,6 +154,43 @@ input[type="number"]:focus {
     color: #f38ba8;
 }
 
+/* Use Life Notification */
+.use-life-notification {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: rgba(231, 76, 60, 0.15);
+    border: 2px solid #e74c3c;
+    border-radius: var(--border-radius);
+    text-align: center;
+}
+
+.use-life-message {
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.btn-use-life {
+    padding: 12px 25px;
+    font-size: 1em;
+    font-weight: bold;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-use-life:hover {
+    background-color: #c0392b;
+}
+
+.btn-use-life:active {
+    transform: scale(0.98);
+}
+
 /* Timer Section */
 .timer-section {
     background-color: var(--bg-secondary);
@@ -180,6 +219,49 @@ input[type="number"]:focus {
 .timer-input-row {
     display: flex;
     gap: 12px;
+}
+
+.timer-toggle-row {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 10px 15px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border: 2px solid var(--bg-tertiary);
+    transition: all 0.2s ease;
+}
+
+.toggle-label:hover {
+    border-color: var(--color-success-dark);
+}
+
+.toggle-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #e67e22;
+    cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-text {
+    color: #e67e22;
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-text {
+    color: var(--text-muted);
+    font-size: 0.95em;
+    font-weight: 500;
 }
 
 .timer-input-group label {
@@ -299,6 +381,15 @@ input[type="number"]:focus {
     background-color: var(--color-error-light);
 }
 
+.btn-done {
+    background-color: #e67e22;
+    color: white;
+}
+
+.btn-done:hover {
+    background-color: #f39c12;
+}
+
 .btn-timer:active {
     transform: scale(0.98);
 }
@@ -378,6 +469,26 @@ input[type="number"]:focus {
     background-color: var(--color-success);
     border: 2px solid var(--color-success);
     box-shadow: 0 0 10px rgba(106, 170, 100, 0.5);
+}
+
+.block-elite {
+    background-color: var(--color-elite);
+    border: 2px solid var(--color-elite);
+    box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+}
+
+.block-champion {
+    background-color: var(--color-champion);
+    border: 2px solid var(--color-champion);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    color: #121213;
+}
+
+.block-life {
+    background-color: rgba(231, 76, 60, 0.3);
+    border: 2px solid #e74c3c;
+    color: #e74c3c;
+    font-size: 1.5em;
 }
 
 .block-today {
@@ -490,6 +601,36 @@ input[type="number"]:focus {
     color: var(--color-success);
 }
 
+.stat-card-elite {
+    border-color: var(--color-elite);
+}
+
+.stat-card-elite .stat-value {
+    color: var(--color-elite);
+}
+
+.stat-card-champion {
+    border-color: var(--color-champion);
+}
+
+.stat-card-champion .stat-value {
+    color: var(--color-champion);
+}
+
+.stat-card-lives {
+    border-color: #e74c3c;
+}
+
+.stat-card-lives .stat-value {
+    color: #e74c3c;
+}
+
+.stat-sublabel {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
 .stat-value {
     font-size: 2em;
     font-weight: bold;
@@ -589,18 +730,21 @@ footer {
 
 .coffee-link {
     display: inline-block;
-    margin-top: 10px;
+    margin-top: 15px;
+    padding: 8px 16px;
+    color: var(--text-muted);
     text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+    border: 1px solid var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+    transition: all 0.2s;
 }
 
 .coffee-link:hover {
-    opacity: 1;
-}
-
-.coffee-icon {
-    font-size: 1.2em;
+    color: var(--text-secondary);
+    background-color: var(--bg-tertiary);
+    border-color: var(--text-darker);
+    transform: translateY(-1px);
 }
 
 /* Modal Styles */
@@ -651,6 +795,21 @@ footer {
     border-radius: var(--border-radius);
     margin-bottom: 20px;
     border: 1px solid var(--bg-tertiary);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-accent);
+    cursor: pointer;
 }
 
 .clear-stats-controls {
@@ -799,6 +958,46 @@ footer {
     width: 100%;
 }
 
+/* View State Management */
+/* Hide sections when timer is active */
+[data-view="timer-active"] .hide-on-timer-active {
+    display: none !important;
+}
+
+/* Center and enlarge timer when active */
+[data-view="timer-active"] .timer-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+    padding: 40px 25px;
+}
+
+[data-view="timer-active"] .timer-display {
+    margin: 40px 0;
+}
+
+[data-view="timer-active"] .timer-time {
+    font-size: 6em;
+}
+
+[data-view="timer-active"] .timer-status {
+    font-size: 2em;
+}
+
+[data-view="timer-active"] .timer-progress {
+    font-size: 1.3em;
+}
+
+[data-view="timer-active"] .timer-start-time {
+    font-size: 1.1em;
+}
+
+[data-view="timer-active"] .timer-controls {
+    margin-top: 30px;
+}
+
 /* Responsive Design */
 @media (max-width: 500px) {
     h1 {
@@ -818,6 +1017,10 @@ footer {
     }
 
     .timer-setup {
+        flex-direction: column;
+    }
+
+    .timer-input-row {
         flex-direction: column;
     }
 
@@ -880,5 +1083,23 @@ footer {
     /* Adjust input sizes for mobile */
     input[type="number"] {
         font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Timer-active view adjustments for mobile */
+    [data-view="timer-active"] .timer-time {
+        font-size: 4em;
+    }
+
+    [data-view="timer-active"] .timer-status {
+        font-size: 1.5em;
+    }
+
+    [data-view="timer-active"] .timer-progress {
+        font-size: 1.1em;
+    }
+
+    [data-view="timer-active"] .timer-section {
+        min-height: 50vh;
+        padding: 30px 15px;
     }
 }

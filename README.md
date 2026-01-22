@@ -2,67 +2,74 @@
 
 Track and share your daily plank exercises with friends, Wordle-style!
 
+**Live at: [pcjohn.co.uk](https://pcjohn.co.uk)**
+
 ## Features
 
-### ⏱️ Plank Timer
-- **Customizable workouts**: Set number of planks (1-10), duration (10-600s), and rest periods (5-180s)
-- **Pause/Resume**: Full control during your workout
-- **Audio feedback**: Optional beeps and metronome ticks to keep you on track
-- **Screen wake lock**: Keeps your screen on during timer sessions (when supported)
-- **Results page**: See your completed workout and share immediately
+### Timer Modes
+- **Fixed Duration Timer** - Set number of planks, duration, and rest time
+- **Plank to Failure** - Unlimited planks, timer counts up until you stop
+  - Milestone sounds at 30s, then every 10s
+  - Personal best tracking with celebration sound
+  - Manual rest control (press Go when ready)
 
-### 📊 Progress Tracking
-- **28-day calendar view**: Visualize your consistency at a glance
-- **Multiple planks per day**: Log as many sessions as you want
-- **Color-coded blocks** (Wordle-style):
+### Progress Tracking
+- 📊 Track multiple planks per day with individual durations
+- 📅 Visual progress grid showing your last 28 days
+- 🏆 Color-coded blocks (like Wordle):
   - ⬜ No plank
   - 🟨 Beginner (< 30 seconds)
-  - 🟩 Intermediate (30-60 seconds)
-  - 🟢 Advanced (60+ seconds)
-- **Manual entry**: Quickly log planks with duration and count
+  - 🟢 Intermediate (30-60 seconds)
+  - 💪 Advanced (60-90 seconds)
+  - 🔥 Elite (90-120 seconds)
+  - 🏆 Champion (120+ seconds)
+  - ❤️ Life used (streak preserved)
+- 📈 Stats: current streak, best streak, planks by category
 
-### 📈 Statistics
-- Current streak and best streak tracking
-- Category breakdowns (Beginner/Intermediate/Advanced)
-- Total planks completed
-- All-time personal records
+### Lives System
+- ❤️ Earn 1 life for every 10 planks completed
+- Use lives to fill missed days and preserve your streak
+- Auto-notification when eligible to use a life
+- Lives displayed in stats (Available/Used)
 
-### 📤 Sharing
-- **WhatsApp integration**: Share directly to chats
-- **Copy to clipboard**: Paste anywhere
-- **Wordle-style emoji grid**: Beautiful visual progress summaries
+### Sharing
+- 📤 Copy progress to clipboard
+- 💬 Direct WhatsApp share
+- Shows ISO week number and stats
 
-### 💾 Privacy & Offline
-- **100% offline-first**: Works without internet after first load
-- **No tracking**: All data stored locally in your browser
-- **No server required**: Your data never leaves your device
+### Technical
+- 💾 All data stored locally (no server required)
+- 📱 Screen wake lock during timer
+- 🔊 Audio feedback (beeps, metronome countdown)
+- Works completely offline after first load
 
 ## How to Use
 
-### Option 1: Use the Timer
-1. **Set your workout**: Choose number of planks, duration, and rest time
-2. **Hit Start**: Follow the audio cues and on-screen timer
-3. **Complete your session**: Review your results and share your achievement
+### Timer Mode
+1. Set number of planks, duration (seconds), and rest time
+2. Or check "Plank to Failure" for unlimited mode
+3. Press Start Timer
+4. In failure mode: press Done when you fail, Go to start next plank
+5. Press Stop to end session
 
-### Option 2: Manual Entry
-1. **Enter duration**: Type the seconds you held your plank
-2. **Set count** (optional): Log multiple planks at once
-3. **Click "Log Plank"**: Your progress is saved instantly
+### Manual Entry
+1. Enter time in seconds
+2. Set count (for multiple identical planks)
+3. Click "Log Plank"
 
-### Track & Share
-- **View your progress**: Check your 28-day calendar and stats
-- **Share achievements**: Copy to clipboard or share directly to WhatsApp
+### Share Progress
+Click WhatsApp or Copy button to share your weekly emoji grid!
 
 ## Example Share
 
 ```
 💪 Plank Club
-Jan 15 - Jan 21
+Week 47 2025
 
-⬜🟨🟩🟢🟩🟨🟩
+⬜🟨🟢💪🔥🏆💪
 
 📅 Today: 3 planks (180s)
-🔥 Streak: 5 | Total Planks: 24
+🔥 Streak: 5 | Total Planks: 42
 
 Join me at Plank Club!
 https://pcjohn.co.uk
@@ -70,20 +77,22 @@ https://pcjohn.co.uk
 
 ## Running Locally
 
-No build process needed! Just:
+No build process needed!
 1. Clone this repository
 2. Open `index.html` in any modern web browser
 3. Start tracking your planks!
 
+## Deployment
+
+Deployed via Vercel from the `main` branch. Push to main triggers automatic deployment.
+
 ## Tech Stack
 
-- **Pure vanilla JavaScript** - No frameworks, no dependencies
-- **HTML5 + CSS3** - Modern, responsive design with CSS custom properties
-- **Browser localStorage** - All data persistence
-- **Web Audio API** - Optional audio feedback during workouts
-- **Screen Wake Lock API** - Keeps screen on during timer (when supported)
-- **Progressive Web App ready** - Works completely offline after first load
-- **Zero build tools** - Just open index.html and start tracking
+- Pure HTML, CSS, and vanilla JavaScript
+- No dependencies, no build tools
+- Web Audio API for sounds
+- Screen Wake Lock API
+- localStorage for persistence
 
 ---
 

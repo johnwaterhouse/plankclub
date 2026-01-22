@@ -5,8 +5,10 @@
 const CONFIG = {
     DISPLAY_DAYS: 28,           // Days to show in progress grid
     SHARE_DAYS: 7,              // Days to include in share text
-    BEGINNER_MAX: 30,           // Max seconds for beginner level
-    INTERMEDIATE_MAX: 60,       // Max seconds for intermediate level
+    BEGINNER_MAX: 30,           // Max seconds for beginner level (0-29s)
+    INTERMEDIATE_MAX: 60,       // Max seconds for intermediate level (30-59s)
+    ADVANCED_MAX: 90,           // Max seconds for advanced level (60-89s)
+    ELITE_MAX: 120,             // Max seconds for elite level (90-119s)
     TIMER_MIN_PLANKS: 1,        // Min number of planks in timer
     TIMER_MAX_PLANKS: 10,       // Max number of planks in timer
     PLANK_MIN_DURATION: 10,     // Min plank duration in seconds
@@ -21,13 +23,31 @@ const CONFIG = {
     BEEP_DURATION: 0.5,         // Beep duration in seconds
     BEEP_VOLUME: 0.3,           // Beep volume (0-1)
     MESSAGE_TIMEOUT: 3000,      // Status message timeout in ms
-    SHARE_DELAY: 1000           // Delay before share prompt in ms
+    SHARE_DELAY: 1000,          // Delay before share prompt in ms
+    // Milestone configurations
+    STREAK_MILESTONES: [21, 30, 60, 100], // Streak milestones to celebrate
+    MILESTONE_ICONS: {
+        21: '🔥',
+        30: '💎',
+        60: '🏅',
+        100: '👑'
+    },
+    MILESTONE_NAMES: {
+        21: 'Three-Week Legend',
+        30: 'Month Master',
+        60: 'Two-Month Hero',
+        100: 'Century Club'
+    },
+    // Life system configuration
+    PLANKS_PER_LIFE: 50         // Number of planks needed to earn one life
 };
 
 class PlankClub {
     constructor() {
         this.storageKey = 'plankClubData';
+        this.livesKey = 'plankClubLives';
         this.data = this.loadData();
+        this.lives = this.loadLives();
 
         // Timer state
         this.timerInterval = null;
@@ -39,10 +59,18 @@ class PlankClub {
         this.plankDuration = 0;
         this.restDuration = 0;
         this.completedPlanks = [];
+        this.lastSessionPlanks = 0; // Store session stats for results modal
+        this.lastSessionTotal = 0;
         this.pausedTime = 0;
         this.startTime = null;
         this.phaseStartTime = null; // Track phase start for accurate timing
         this.lastMetronomeSecond = null; // Track last metronome tick to prevent duplicates
+        this.lastMilestoneSecond = null; // Track last milestone sound to prevent duplicates
+
+        // Failure mode
+        this.isFailureMode = false;
+        this.personalBest = this.loadPersonalBest();
+        this.hasBeatenBest = false; // Track if we've beaten best in current plank
 
         // Wake lock
         this.wakeLock = null;
@@ -59,27 +87,30 @@ class PlankClub {
         this.updateStats();
         this.setupEventListeners();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
         this.setupVisibilityListener();
         this.loadTimerPreferences();
+        this.setView('setup'); // Start in setup view
+    }
+
+    // Set the current view (setup or timer-active)
+    setView(view) {
+        const container = document.querySelector('.container');
+        container.setAttribute('data-view', view);
     }
 
     // Load data from localStorage
     loadData() {
         const stored = localStorage.getItem(this.storageKey);
         if (stored) {
-            try {
-                const data = JSON.parse(stored);
-                // Migrate old format (single number) to new format (array)
-                for (const date in data) {
-                    if (typeof data[date] === 'number') {
-                        data[date] = [data[date]];
-                    }
+            const data = JSON.parse(stored);
+            // Migrate old format (single number) to new format (array)
+            for (const date in data) {
+                if (typeof data[date] === 'number') {
+                    data[date] = [data[date]];
                 }
-                return data;
-            } catch (e) {
-                console.error('Error parsing stored data:', e);
-                return {};
             }
+            return data;
         }
         return {};
     }
@@ -87,6 +118,80 @@ class PlankClub {
     // Save data to localStorage
     saveData() {
         localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+    }
+
+    // Load lives data from localStorage
+    loadLives() {
+        const stored = localStorage.getItem(this.livesKey);
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch (e) {
+                console.error('Failed to load lives data:', e);
+            }
+        }
+        return { usedLives: [] }; // Array of dates where lives were used
+    }
+
+    // Save lives data to localStorage
+    saveLives() {
+        try {
+            localStorage.setItem(this.livesKey, JSON.stringify(this.lives));
+        } catch (e) {
+            console.error('Failed to save lives data:', e);
+        }
+    }
+
+    // Calculate total available lives (earned from total planks)
+    getAvailableLives() {
+        let totalPlanks = 0;
+        for (const dateData of Object.values(this.data)) {
+            if (Array.isArray(dateData)) {
+                totalPlanks += dateData.length;
+            }
+        }
+        return Math.floor(totalPlanks / CONFIG.PLANKS_PER_LIFE);
+    }
+
+    // Get number of lives used
+    getUsedLivesCount() {
+        return this.lives.usedLives.length;
+    }
+
+    // Get remaining lives
+    getRemainingLives() {
+        return Math.max(0, this.getAvailableLives() - this.getUsedLivesCount());
+    }
+
+    // Check if a life was used on a specific date
+    hasLifeUsed(dateStr) {
+        return this.lives.usedLives.includes(dateStr);
+    }
+
+    // Use a life for a specific date
+    useLife(dateStr) {
+        if (!this.hasLifeUsed(dateStr) && this.getRemainingLives() > 0) {
+            this.lives.usedLives.push(dateStr);
+            this.saveLives();
+            return true;
+        }
+        return false;
+    }
+
+    // Load personal best for failure mode
+    loadPersonalBest() {
+        const stored = localStorage.getItem('plankPersonalBest');
+        return stored ? parseInt(stored) : 0;
+    }
+
+    // Save personal best for failure mode
+    savePersonalBest(seconds) {
+        if (seconds > this.personalBest) {
+            this.personalBest = seconds;
+            localStorage.setItem('plankPersonalBest', seconds.toString());
+            return true;
+        }
+        return false;
     }
 
     // Get today's date in YYYY-MM-DD format (local timezone)
@@ -108,14 +213,6 @@ class PlankClub {
         return `${year}-${month}-${day}`;
     }
 
-    // Format any Date object as YYYY-MM-DD (local timezone)
-    formatDateAsKey(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
     // Format date for display (e.g., "Nov 13")
     formatDateDisplay(dateStr) {
         const date = new Date(dateStr + 'T00:00:00');
@@ -124,28 +221,76 @@ class PlankClub {
         return `${month} ${day}`;
     }
 
+    // Get ISO week number for a date
+    getISOWeek(date) {
+        // Create a copy of the date to avoid modifying the original
+        const d = new Date(date.getTime());
+
+        // Set to nearest Thursday: current date + 4 - current day number
+        // Make Sunday's day number 7
+        const dayNum = d.getDay() || 7;
+        d.setDate(d.getDate() + 4 - dayNum);
+
+        // Get first day of year
+        const yearStart = new Date(d.getFullYear(), 0, 1);
+
+        // Calculate full weeks to nearest Thursday
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+
+        return weekNo;
+    }
+
+    // Get ISO week year (may differ from calendar year for dates near year boundary)
+    getISOWeekYear(date) {
+        const d = new Date(date.getTime());
+        const dayNum = d.getDay() || 7;
+        d.setDate(d.getDate() + 4 - dayNum);
+        return d.getFullYear();
+    }
+
     // Get total seconds for a date (sum of all planks)
     getTotalSeconds(dateData) {
         if (!dateData || !Array.isArray(dateData)) return 0;
         return dateData.reduce((sum, seconds) => sum + seconds, 0);
     }
 
+    // Get max plank duration for a date (longest individual plank)
+    getMaxPlankDuration(dateData) {
+        if (!dateData || !Array.isArray(dateData) || dateData.length === 0) return 0;
+        return Math.max(...dateData);
+    }
+
     // Get block class based on plank time
     getBlockClass(dateData) {
-        const totalSeconds = this.getTotalSeconds(dateData);
-        if (totalSeconds === 0) return 'block-empty';
-        if (totalSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
-        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
-        return 'block-advanced';
+        const maxSeconds = this.getMaxPlankDuration(dateData);
+        if (maxSeconds === 0) return 'block-empty';
+        if (maxSeconds < CONFIG.BEGINNER_MAX) return 'block-beginner';
+        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return 'block-intermediate';
+        if (maxSeconds < CONFIG.ADVANCED_MAX) return 'block-advanced';
+        if (maxSeconds < CONFIG.ELITE_MAX) return 'block-elite';
+        return 'block-champion';
     }
 
     // Get emoji for sharing based on plank time
-    getBlockEmoji(dateData) {
-        const totalSeconds = this.getTotalSeconds(dateData);
-        if (totalSeconds === 0) return '⬜';
-        if (totalSeconds < CONFIG.BEGINNER_MAX) return '🟨';
-        if (totalSeconds < CONFIG.INTERMEDIATE_MAX) return '🟩';
-        return '🟢';
+    getBlockEmoji(dateData, currentStreak = 0, hasLife = false) {
+        // Life used takes priority over empty
+        if (hasLife) {
+            return '❤️';
+        }
+
+        const maxSeconds = this.getMaxPlankDuration(dateData);
+        if (maxSeconds === 0) return '⬜';
+
+        // 14+ day streak earns stars for completed days
+        if (currentStreak >= 14 && maxSeconds > 0) {
+            return '⭐';
+        }
+
+        if (maxSeconds < CONFIG.BEGINNER_MAX) return '🟨';
+        if (maxSeconds < CONFIG.INTERMEDIATE_MAX) return '🟢';
+        if (maxSeconds < CONFIG.ADVANCED_MAX) return '💪';
+        if (maxSeconds < CONFIG.ELITE_MAX) return '🔥';
+        return '🏆';
     }
 
     // Load timer preferences from localStorage
@@ -153,10 +298,12 @@ class PlankClub {
         const prefs = localStorage.getItem('timerPreferences');
         if (prefs) {
             try {
-                const { count, duration, rest } = JSON.parse(prefs);
+                const { count, duration, rest, failureMode, miniShare } = JSON.parse(prefs);
                 document.getElementById('timerCount').value = count || 3;
                 document.getElementById('timerDuration').value = duration || 60;
                 document.getElementById('restDuration').value = rest || 30;
+                document.getElementById('failureMode').checked = failureMode || false;
+                document.getElementById('miniShare').checked = miniShare || false;
             } catch (e) {
                 console.log('Could not load timer preferences');
             }
@@ -164,9 +311,9 @@ class PlankClub {
     }
 
     // Save timer preferences to localStorage
-    saveTimerPreferences(count, duration, rest) {
+    saveTimerPreferences(count, duration, rest, failureMode, miniShare) {
         try {
-            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest }));
+            localStorage.setItem('timerPreferences', JSON.stringify({ count, duration, rest, failureMode, miniShare }));
         } catch (e) {
             console.log('Could not save timer preferences');
         }
@@ -180,9 +327,11 @@ class PlankClub {
         });
         document.getElementById('shareBtn').addEventListener('click', () => this.shareProgress());
         document.getElementById('whatsappBtn').addEventListener('click', () => this.shareToWhatsApp());
+        document.getElementById('useLifeBtn').addEventListener('click', () => this.handleUseLife());
 
         // Timer event listeners
         document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
+        document.getElementById('doneTimerBtn').addEventListener('click', () => this.completePlank());
         document.getElementById('pauseTimerBtn').addEventListener('click', () => this.pauseTimer());
         document.getElementById('stopTimerBtn').addEventListener('click', () => this.stopTimer());
 
@@ -190,6 +339,7 @@ class PlankClub {
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
         document.getElementById('closeModalBtn').addEventListener('click', () => this.closeSettings());
         document.getElementById('clearStatsBtn').addEventListener('click', () => this.promptClearStats());
+        document.getElementById('miniShare').addEventListener('change', () => this.saveMiniSharePreference());
 
         // Confirmation modal event listeners
         document.getElementById('confirmYesBtn').addEventListener('click', () => this.confirmClearStats());
@@ -280,6 +430,7 @@ class PlankClub {
         this.renderProgressGrid();
         this.updateStats();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
 
         // Clear time input but keep count
         timeInput.value = '';
@@ -301,7 +452,8 @@ class PlankClub {
         for (let i = daysToShow - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
-            const blockClass = this.getBlockClass(dateData);
+            const hasLife = this.hasLifeUsed(date);
+            const blockClass = hasLife ? 'block-life' : this.getBlockClass(dateData);
 
             const block = document.createElement('div');
             block.className = `block ${blockClass}`;
@@ -314,14 +466,18 @@ class PlankClub {
             const displayDate = this.formatDateDisplay(date);
             const totalSeconds = this.getTotalSeconds(dateData);
             let timeText = 'No plank';
-            if (dateData.length > 0) {
+            if (hasLife) {
+                timeText = 'Life used ❤️';
+            } else if (dateData.length > 0) {
                 const planksList = dateData.map((s, i) => `#${i + 1}: ${s}s`).join(', ');
                 timeText = `${dateData.length} plank${dateData.length > 1 ? 's' : ''} (${planksList}) - Total: ${totalSeconds}s`;
             }
             block.title = `${displayDate}: ${timeText}`;
 
-            // Show total seconds in the block
-            if (totalSeconds > 0) {
+            // Show content in the block
+            if (hasLife) {
+                block.textContent = '❤️';
+            } else if (totalSeconds > 0) {
                 block.textContent = totalSeconds;
             }
 
@@ -329,15 +485,18 @@ class PlankClub {
         }
     }
 
-    // Calculate current streak
+    // Calculate current streak (accounting for lives used)
     calculateCurrentStreak() {
         let streak = 0;
         let date = new Date();
 
         while (true) {
-            const dateStr = this.formatDateAsKey(date);
+            const dateStr = date.toISOString().split('T')[0];
             const dateData = this.data[dateStr];
-            if (dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0) {
+            const hasPlank = dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0;
+            const hasLife = this.hasLifeUsed(dateStr);
+
+            if (hasPlank || hasLife) {
                 streak++;
                 date.setDate(date.getDate() - 1);
             } else {
@@ -348,18 +507,28 @@ class PlankClub {
         return streak;
     }
 
-    // Calculate max streak
+    // Calculate max streak (accounting for lives used)
     calculateMaxStreak() {
-        const dates = Object.keys(this.data).sort();
-        if (dates.length === 0) return 0;
+        // Get all dates (both with planks and with lives)
+        const allDates = new Set([
+            ...Object.keys(this.data),
+            ...this.lives.usedLives
+        ]);
+
+        if (allDates.size === 0) return 0;
+
+        const sortedDates = Array.from(allDates).sort((a, b) => a.localeCompare(b));
 
         let maxStreak = 0;
         let currentStreak = 0;
         let prevDate = null;
 
-        for (const dateStr of dates) {
+        for (const dateStr of sortedDates) {
             const dateData = this.data[dateStr];
-            if (dateData && Array.isArray(dateData) && this.getTotalSeconds(dateData) > 0) {
+            const hasPlank = dateData && Array.isArray(dateData) && this.getTotalSeconds(dateData) > 0;
+            const hasLife = this.hasLifeUsed(dateStr);
+
+            if (hasPlank || hasLife) {
                 if (prevDate === null) {
                     currentStreak = 1;
                 } else {
@@ -391,6 +560,8 @@ class PlankClub {
         let beginnerCount = 0;
         let intermediateCount = 0;
         let advancedCount = 0;
+        let eliteCount = 0;
+        let championCount = 0;
 
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
@@ -400,8 +571,12 @@ class PlankClub {
                         beginnerCount++;
                     } else if (seconds < CONFIG.INTERMEDIATE_MAX) {
                         intermediateCount++;
-                    } else {
+                    } else if (seconds < CONFIG.ADVANCED_MAX) {
                         advancedCount++;
+                    } else if (seconds < CONFIG.ELITE_MAX) {
+                        eliteCount++;
+                    } else {
+                        championCount++;
                     }
                 }
             }
@@ -412,40 +587,108 @@ class PlankClub {
         document.getElementById('beginnerCount').textContent = beginnerCount;
         document.getElementById('intermediateCount').textContent = intermediateCount;
         document.getElementById('advancedCount').textContent = advancedCount;
+        document.getElementById('eliteCount').textContent = eliteCount;
+        document.getElementById('championCount').textContent = championCount;
         document.getElementById('totalPlanks').textContent = totalPlanks;
+
+        // Update lives information
+        const availableLives = this.getAvailableLives();
+        const usedLives = this.getUsedLivesCount();
+        const remainingLives = this.getRemainingLives();
+        document.getElementById('livesRemaining').textContent = remainingLives;
+        document.getElementById('livesInfo').textContent = `${usedLives}/${availableLives} used`;
+    }
+
+    // Check if user is eligible to use a life (yesterday was missed)
+    checkUseLifeEligibility() {
+        const yesterday = this.getDateDaysAgo(1);
+        const yesterdayData = this.data[yesterday] || [];
+        const hasYesterdayPlank = yesterdayData.length > 0 && this.getTotalSeconds(yesterdayData) > 0;
+        const hasYesterdayLife = this.hasLifeUsed(yesterday);
+        const remainingLives = this.getRemainingLives();
+
+        const notification = document.getElementById('useLifeNotification');
+
+        // Show notification if yesterday was missed and user has lives available
+        if (!hasYesterdayPlank && !hasYesterdayLife && remainingLives > 0) {
+            notification.style.display = 'block';
+        } else {
+            notification.style.display = 'none';
+        }
+    }
+
+    // Handle use life button click
+    handleUseLife() {
+        const yesterday = this.getDateDaysAgo(1);
+        const remainingLives = this.getRemainingLives();
+
+        if (remainingLives <= 0) {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ No lives available! Complete 50 planks to earn a life.';
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+            return;
+        }
+
+        if (this.useLife(yesterday)) {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message success';
+            statusDiv.textContent = `✅ Life used for ${this.formatDateDisplay(yesterday)}! Streak preserved! ❤️`;
+
+            // Refresh UI
+            this.renderProgressGrid();
+            this.updateStats();
+            this.checkUseLifeEligibility();
+
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+        } else {
+            const statusDiv = document.getElementById('todayStatus');
+            statusDiv.className = 'status-message error';
+            statusDiv.textContent = '❌ Could not use life. You may have already used one for this day.';
+            setTimeout(() => {
+                this.checkTodayStatus();
+            }, CONFIG.MESSAGE_TIMEOUT);
+        }
     }
 
     // Generate share text (Wordle-style)
     generateShareText() {
         const today = this.getTodayDate();
         const daysToShare = CONFIG.SHARE_DAYS;
+        const miniShare = document.getElementById('miniShare').checked;
 
-        // Get date range for display
-        const startDate = this.getDateDaysAgo(daysToShare - 1);
-        const endDate = this.getDateDaysAgo(0);
-        const startDisplay = this.formatDateDisplay(startDate);
-        const endDisplay = this.formatDateDisplay(endDate);
+        // Get ISO week number for today
+        const todayDate = new Date();
+        const weekNumber = this.getISOWeek(todayDate);
+        const weekYear = this.getISOWeekYear(todayDate);
 
-        let shareText = '💪 Plank Club\n';
-        shareText += `${startDisplay} - ${endDisplay}\n\n`;
+        // Calculate streak first (needed for star badge)
+        const currentStreak = this.calculateCurrentStreak();
+        const livesUsed = this.getUsedLivesCount();
 
-        // Add grid
+        // Check for milestone
+        let milestone = null;
+        for (const ms of CONFIG.STREAK_MILESTONES) {
+            if (currentStreak >= ms) {
+                milestone = ms;
+            }
+        }
+
+        // Build grid
+        let grid = '';
         for (let i = daysToShare - 1; i >= 0; i--) {
             const date = this.getDateDaysAgo(i);
             const dateData = this.data[date] || [];
-            const emoji = this.getBlockEmoji(dateData);
-            shareText += emoji;
+            const hasLife = this.hasLifeUsed(date);
+            const emoji = this.getBlockEmoji(dateData, currentStreak, hasLife);
+            grid += emoji;
         }
 
-        shareText += '\n\n';
-
-        // Add stats
-        const currentStreak = this.calculateCurrentStreak();
-        const todayData = this.data[today] || [];
-        const todayPlanks = todayData.length;
-        const todayTotal = this.getTotalSeconds(todayData);
-
-        // Count total planks (individual exercises, not days)
+        // Calculate stats
         let totalPlanks = 0;
         for (const dateData of Object.values(this.data)) {
             if (Array.isArray(dateData)) {
@@ -453,13 +696,44 @@ class PlankClub {
             }
         }
 
+        if (miniShare) {
+            // Mini format: compact single-line stats
+            let streakText = `${currentStreak} streak`;
+            if (livesUsed > 0) {
+                streakText += ` (${livesUsed} ❤️)`;
+            }
+            return `💪 Plank Club W${weekNumber}\n${grid}\n🔥 ${streakText} | ${totalPlanks} total`;
+        }
+
+        // Normal format (without link)
+        let shareText = '💪 Plank Club\n';
+
+        // Add milestone banner if applicable
+        if (milestone) {
+            const icon = CONFIG.MILESTONE_ICONS[milestone];
+            const name = CONFIG.MILESTONE_NAMES[milestone];
+            shareText += `${icon} ${milestone} DAY STREAK - ${name.toUpperCase()}! ${icon}\n`;
+        }
+
+        shareText += `Week ${weekNumber} ${weekYear}\n\n`;
+        shareText += grid;
+        shareText += '\n\n';
+
+        const todayData = this.data[today] || [];
+        const todayPlanks = todayData.length;
+        const todayTotal = this.getTotalSeconds(todayData);
+
         // Show today's stats if available
         if (todayPlanks > 0) {
             shareText += `📅 Today: ${todayPlanks} plank${todayPlanks > 1 ? 's' : ''} (${todayTotal}s)\n`;
         }
 
-        shareText += `🔥 Streak: ${currentStreak} | Total Planks: ${totalPlanks}\n`;
-        shareText += '\nJoin me at Plank Club!\nhttps://pcjohn.co.uk';
+        // Add lives info to streak if any used
+        let streakText = `🔥 Streak: ${currentStreak}`;
+        if (livesUsed > 0) {
+            streakText += ` (${livesUsed} life${livesUsed > 1 ? 'ves' : ''} used ❤️)`;
+        }
+        shareText += `${streakText} | Total Planks: ${totalPlanks}`;
 
         return shareText;
     }
@@ -485,37 +759,10 @@ class PlankClub {
     }
 
     // Share to WhatsApp
-    async shareToWhatsApp() {
+    shareToWhatsApp() {
         const shareText = this.generateShareText();
-
-        // Prefer Web Share API when available (more standard on mobile/secure contexts)
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    title: 'Plank Club',
-                    text: shareText,
-                    url: 'https://pcjohn.co.uk' // optional
-                });
-                return;
-            } catch (err) {
-                // If user cancels share or it fails, fall back to other methods
-                console.log('Web Share failed or cancelled:', err);
-            }
-        }
-
-        // Fallback: open WhatsApp web/intent
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-        const win = window.open(whatsappUrl, '_blank');
-
-        // If popup blocked, copy to clipboard as last resort
-        if (!win) {
-            try {
-                await navigator.clipboard.writeText(shareText);
-                alert('Share text copied to clipboard. Paste it into WhatsApp to share.');
-            } catch (err) {
-                alert('Could not open WhatsApp or copy to clipboard. Here is the text to share:\n\n' + shareText);
-            }
-        }
+        window.open(whatsappUrl, '_blank');
     }
 
     // Show results page after session ends
@@ -523,8 +770,8 @@ class PlankClub {
         const today = this.getTodayDate();
         const todayData = this.data[today] || [];
         const todayTotal = this.getTotalSeconds(todayData);
-        const sessionPlanks = this.completedPlanks.length;
-        const sessionTotal = this.completedPlanks.reduce((sum, s) => sum + s, 0);
+        const sessionPlanks = this.lastSessionPlanks || 0;
+        const sessionTotal = this.lastSessionTotal || 0;
         const currentStreak = this.calculateCurrentStreak();
 
         // Hide main timer display and show results modal
@@ -608,22 +855,28 @@ class PlankClub {
         const countInput = document.getElementById('timerCount');
         const durationInput = document.getElementById('timerDuration');
         const restInput = document.getElementById('restDuration');
+        const failureModeInput = document.getElementById('failureMode');
+        const miniShareInput = document.getElementById('miniShare');
 
         this.totalPlanks = parseInt(countInput.value) || 3;
         this.plankDuration = parseInt(durationInput.value) || 60;
         this.restDuration = parseInt(restInput.value) || 30;
+        this.isFailureMode = failureModeInput.checked;
 
         // Save preferences for next time
-        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration);
+        this.saveTimerPreferences(this.totalPlanks, this.plankDuration, this.restDuration, this.isFailureMode, miniShareInput.checked);
 
         if (this.totalPlanks < CONFIG.TIMER_MIN_PLANKS || this.totalPlanks > CONFIG.TIMER_MAX_PLANKS) {
             this.showTimerMessage(`❌ Number of planks must be between ${CONFIG.TIMER_MIN_PLANKS} and ${CONFIG.TIMER_MAX_PLANKS}`, 'error');
             return;
         }
 
-        if (this.plankDuration < CONFIG.PLANK_MIN_DURATION || this.plankDuration > CONFIG.PLANK_MAX_DURATION) {
-            this.showTimerMessage(`❌ Duration must be between ${CONFIG.PLANK_MIN_DURATION} and ${CONFIG.PLANK_MAX_DURATION} seconds`, 'error');
-            return;
+        // Only validate duration if not in failure mode
+        if (!this.isFailureMode) {
+            if (this.plankDuration < CONFIG.PLANK_MIN_DURATION || this.plankDuration > CONFIG.PLANK_MAX_DURATION) {
+                this.showTimerMessage(`❌ Duration must be between ${CONFIG.PLANK_MIN_DURATION} and ${CONFIG.PLANK_MAX_DURATION} seconds`, 'error');
+                return;
+            }
         }
 
         if (this.restDuration < CONFIG.REST_MIN_DURATION || this.restDuration > CONFIG.REST_MAX_DURATION) {
@@ -638,10 +891,12 @@ class PlankClub {
         this.currentPlank = 1;
         this.completedPlanks = [];
         this.timerState = 'plank';
-        this.timeRemaining = this.plankDuration;
+        this.timeRemaining = this.isFailureMode ? 0 : this.plankDuration;
         this.startTime = new Date();
         this.phaseStartTime = Date.now();
         this.lastMetronomeSecond = null;
+        this.lastMilestoneSecond = null;
+        this.hasBeatenBest = false;
 
         // Display start time
         const timeStr = this.startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -651,11 +906,16 @@ class PlankClub {
         countInput.disabled = true;
         durationInput.disabled = true;
         restInput.disabled = true;
+        failureModeInput.disabled = true;
 
         // Show/hide buttons
         document.getElementById('startTimerBtn').style.display = 'none';
+        document.getElementById('doneTimerBtn').style.display = this.isFailureMode ? 'inline-block' : 'none';
         document.getElementById('pauseTimerBtn').style.display = 'inline-block';
         document.getElementById('stopTimerBtn').style.display = 'inline-block';
+
+        // Switch to timer-active view
+        this.setView('timer-active');
 
         this.updateTimerDisplay();
         this.runTimer();
@@ -666,14 +926,29 @@ class PlankClub {
             // Resume
             this.timerState = this.previousTimerState || 'plank';
             this.previousTimerState = null;
-            this.phaseStartTime = Date.now(); // Reset phase start time
+            // Adjust phase start time to account for paused duration
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // For failure mode, we need to continue from current elapsed time
+                this.phaseStartTime = Date.now() - (this.timeRemaining * 1000);
+            } else {
+                // For normal mode, calculate elapsed time from remaining
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                const elapsed = phaseDuration - this.timeRemaining;
+                this.phaseStartTime = Date.now() - (elapsed * 1000);
+            }
             document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
             this.runTimer();
         } else {
-            // Pause - calculate remaining time based on elapsed time
+            // Pause - calculate current time
             const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
-            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
-            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // Failure mode: keep elapsed time
+                this.timeRemaining = elapsed;
+            } else {
+                // Normal mode: calculate remaining
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+            }
             this.previousTimerState = this.timerState;
             this.timerState = 'paused';
             document.getElementById('pauseTimerBtn').innerHTML = '▶️ Resume';
@@ -682,9 +957,88 @@ class PlankClub {
         }
     }
 
+    // Complete current plank in failure mode and transition to rest or end
+    completePlank() {
+        if (!this.isFailureMode) return;
+
+        // Handle both plank completion and rest skip
+        if (this.timerState === 'plank') {
+            clearInterval(this.timerInterval);
+
+            // Log the current plank time
+            const plankTime = this.timeRemaining;
+            if (plankTime > 0) {
+                this.completedPlanks.push(plankTime);
+                // Save personal best if beaten
+                if (plankTime > this.personalBest) {
+                    this.savePersonalBest(plankTime);
+                }
+            }
+
+            this.playBeep();
+
+            // Always go to rest in failure mode (unlimited planks)
+            this.timerState = 'rest';
+            this.phaseStartTime = Date.now();
+            this.timeRemaining = this.restDuration;
+            this.lastMetronomeSecond = null;
+            this.lastMilestoneSecond = null;
+            this.hasBeatenBest = false;
+            this.showTimerMessage(`✅ Plank ${this.completedPlanks.length} complete: ${plankTime}s! Rest now.`, 'success');
+
+            // Change button to "Go" during rest
+            const doneBtn = document.getElementById('doneTimerBtn');
+            doneBtn.textContent = '▶️ Go';
+            doneBtn.style.display = 'inline-block';
+
+            this.updateTimerDisplay();
+            this.runTimer();
+        } else if (this.timerState === 'rest') {
+            // Skip rest and start next plank
+            clearInterval(this.timerInterval);
+            this.startNextPlank();
+        }
+    }
+
+    // Start the next plank in failure mode
+    startNextPlank() {
+        this.playBeep();
+        this.currentPlank++;
+        this.timerState = 'plank';
+        this.phaseStartTime = Date.now();
+        this.timeRemaining = 0;
+        this.lastMetronomeSecond = null;
+        this.lastMilestoneSecond = null;
+        this.hasBeatenBest = false;
+        this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+
+        // Change button back to "Done"
+        const doneBtn = document.getElementById('doneTimerBtn');
+        doneBtn.textContent = '✓ Done';
+        doneBtn.style.display = 'inline-block';
+
+        this.updateTimerDisplay();
+        this.runTimer();
+    }
+
     stopTimer() {
         clearInterval(this.timerInterval);
+
+        // In failure mode, log the current plank time if in progress
+        // Check both current state and previous state (if paused)
+        const wasInPlank = this.timerState === 'plank' ||
+            (this.timerState === 'paused' && this.previousTimerState === 'plank');
+
+        if (this.isFailureMode && wasInPlank && this.timeRemaining > 0) {
+            this.completedPlanks.push(this.timeRemaining);
+            // Save personal best if beaten
+            if (this.timeRemaining > this.personalBest) {
+                this.savePersonalBest(this.timeRemaining);
+            }
+        }
+
         this.timerState = 'idle';
+        this.previousTimerState = null;
         this.startTime = null;
 
         // Release wake lock
@@ -694,9 +1048,12 @@ class PlankClub {
         document.getElementById('timerCount').disabled = false;
         document.getElementById('timerDuration').disabled = false;
         document.getElementById('restDuration').disabled = false;
+        document.getElementById('failureMode').disabled = false;
 
-        // Show/hide buttons
+        // Show/hide buttons and reset text
         document.getElementById('startTimerBtn').style.display = 'inline-block';
+        document.getElementById('doneTimerBtn').style.display = 'none';
+        document.getElementById('doneTimerBtn').textContent = '✓ Done';
         document.getElementById('pauseTimerBtn').style.display = 'none';
         document.getElementById('stopTimerBtn').style.display = 'none';
         document.getElementById('pauseTimerBtn').innerHTML = '⏸️ Pause';
@@ -707,6 +1064,9 @@ class PlankClub {
         document.getElementById('timerTime').textContent = '00:00';
         document.getElementById('timerProgress').textContent = 'Plank 0 of 0';
 
+        // Switch back to setup view
+        this.setView('setup');
+
         // Log completed planks if any
         if (this.completedPlanks.length > 0) {
             this.logTimedPlanks();
@@ -715,47 +1075,81 @@ class PlankClub {
 
     runTimer() {
         this.timerInterval = setInterval(() => {
-            // Calculate time remaining based on elapsed time (prevents drift)
             const elapsed = Math.floor((Date.now() - this.phaseStartTime) / 1000);
-            const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
-            this.timeRemaining = Math.max(0, phaseDuration - elapsed);
 
-            // Play metronome tick in last 5 seconds of any phase (only once per second)
-            if (this.timeRemaining > 0 && this.timeRemaining <= 5) {
-                if (this.lastMetronomeSecond !== this.timeRemaining) {
-                    this.playMetronomeTick();
-                    this.lastMetronomeSecond = this.timeRemaining;
-                }
-            }
+            if (this.isFailureMode && this.timerState === 'plank') {
+                // Failure mode: count UP
+                this.timeRemaining = elapsed;
 
-            if (this.timeRemaining <= 0) {
-                if (this.timerState === 'plank') {
-                    // Plank completed
-                    this.completedPlanks.push(this.plankDuration);
-                    this.playBeep();
+                // Play milestone sounds: 30s, then every 10s after (40, 50, 60, etc.)
+                if (this.timeRemaining >= 30) {
+                    const isMilestone = this.timeRemaining === 30 ||
+                        (this.timeRemaining > 30 && (this.timeRemaining - 30) % 10 === 0);
 
-                    if (this.currentPlank >= this.totalPlanks) {
-                        // All planks completed
-                        this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
-                        this.logTimedPlanks();
-                        this.stopTimer(); // stopTimer handles cleanup (interval, wake lock, etc.)
-                        this.showResultsPage();
-                        return;
-                    } else {
-                        // Start rest period
-                        this.timerState = 'rest';
-                        this.phaseStartTime = Date.now();
-                        this.timeRemaining = this.restDuration;
-                        this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
+                    if (isMilestone && this.lastMilestoneSecond !== this.timeRemaining) {
+                        this.playMilestoneSound();
+                        this.lastMilestoneSecond = this.timeRemaining;
                     }
-                } else if (this.timerState === 'rest') {
-                    // Rest completed, start next plank
-                    this.playBeep();
-                    this.currentPlank++;
-                    this.timerState = 'plank';
-                    this.phaseStartTime = Date.now();
-                    this.timeRemaining = this.plankDuration;
-                    this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+                }
+
+                // Check if beating personal best (only alert once per plank)
+                if (this.personalBest > 0 && this.timeRemaining > this.personalBest && !this.hasBeatenBest) {
+                    this.hasBeatenBest = true;
+                    this.playCelebrationSound();
+                    this.showTimerMessage(`🏆 NEW PERSONAL BEST! Previous: ${this.personalBest}s`, 'success');
+                }
+            } else {
+                // Normal mode: count DOWN
+                const phaseDuration = this.timerState === 'plank' ? this.plankDuration : this.restDuration;
+                this.timeRemaining = Math.max(0, phaseDuration - elapsed);
+
+                // Play metronome tick in last 5 seconds of any phase (only once per second)
+                if (this.timeRemaining > 0 && this.timeRemaining <= 5) {
+                    if (this.lastMetronomeSecond !== this.timeRemaining) {
+                        this.playMetronomeTick();
+                        this.lastMetronomeSecond = this.timeRemaining;
+                    }
+                }
+
+                if (this.timeRemaining <= 0) {
+                    if (this.timerState === 'plank') {
+                        // Plank completed
+                        this.completedPlanks.push(this.plankDuration);
+                        this.playBeep();
+
+                        if (this.currentPlank >= this.totalPlanks) {
+                            // All planks completed
+                            this.showTimerMessage(`🎉 Completed ${this.totalPlanks} planks!`, 'success');
+                            this.logTimedPlanks();
+                            this.stopTimer();
+                            this.showResultsPage();
+                            return;
+                        } else {
+                            // Start rest period
+                            this.timerState = 'rest';
+                            this.phaseStartTime = Date.now();
+                            this.timeRemaining = this.restDuration;
+                            this.lastMetronomeSecond = null;
+                            this.showTimerMessage(`✅ Plank ${this.currentPlank} complete! Rest now.`, 'success');
+                        }
+                    } else if (this.timerState === 'rest') {
+                        // Rest completed
+                        if (this.isFailureMode) {
+                            // In failure mode, wait for user to press Go
+                            clearInterval(this.timerInterval);
+                            this.playBeep();
+                            this.showTimerMessage(`⏰ Rest complete! Press Go when ready.`, 'info');
+                        } else {
+                            // Normal mode: auto-start next plank
+                            this.playBeep();
+                            this.currentPlank++;
+                            this.timerState = 'plank';
+                            this.phaseStartTime = Date.now();
+                            this.timeRemaining = this.plankDuration;
+                            this.lastMetronomeSecond = null;
+                            this.showTimerMessage(`💪 Starting plank ${this.currentPlank}!`, 'info');
+                        }
+                    }
                 }
             }
 
@@ -771,8 +1165,13 @@ class PlankClub {
         document.getElementById('timerTime').textContent = timeStr;
 
         if (this.timerState === 'plank') {
-            document.getElementById('timerStatus').textContent = `🏋️ PLANK ${this.currentPlank}`;
-            document.getElementById('timerStatus').style.color = '#6aaa64';
+            if (this.isFailureMode) {
+                document.getElementById('timerStatus').textContent = `💪 TO FAILURE ${this.currentPlank}`;
+                document.getElementById('timerStatus').style.color = '#e67e22';
+            } else {
+                document.getElementById('timerStatus').textContent = `🏋️ PLANK ${this.currentPlank}`;
+                document.getElementById('timerStatus').style.color = '#6aaa64';
+            }
         } else if (this.timerState === 'rest') {
             document.getElementById('timerStatus').textContent = `😌 REST`;
             document.getElementById('timerStatus').style.color = '#b59f3b';
@@ -781,8 +1180,19 @@ class PlankClub {
             document.getElementById('timerStatus').style.color = '#818384';
         }
 
-        document.getElementById('timerProgress').textContent =
-            `Plank ${this.currentPlank} of ${this.totalPlanks} (${this.completedPlanks.length} completed)`;
+        // Show progress text
+        let progressText;
+        if (this.isFailureMode) {
+            // Failure mode: show completed count and personal best
+            progressText = `Planks completed: ${this.completedPlanks.length}`;
+            if (this.timerState === 'plank' && this.personalBest > 0) {
+                progressText += ` | PB: ${this.personalBest}s`;
+            }
+        } else {
+            // Normal mode: show X of Y
+            progressText = `Plank ${this.currentPlank} of ${this.totalPlanks} (${this.completedPlanks.length} completed)`;
+        }
+        document.getElementById('timerProgress').textContent = progressText;
     }
 
     showTimerMessage(message, type) {
@@ -797,33 +1207,28 @@ class PlankClub {
     }
 
     logTimedPlanks() {
-        // Guard against race conditions - don't log if timer is still running
-        if (this.timerState !== 'idle' && this.timerState !== 'paused') {
-            console.warn('Timer still running, cannot log planks');
-            return;
-        }
-
-        // Capture planks to log before any async operations
-        const planksToLog = [...this.completedPlanks];
-        if (planksToLog.length === 0) return;
-
         const today = this.getTodayDate();
 
         if (!this.data[today]) {
             this.data[today] = [];
         }
 
+        // Store session stats before clearing (for results modal)
+        this.lastSessionPlanks = this.completedPlanks.length;
+        this.lastSessionTotal = this.completedPlanks.reduce((sum, s) => sum + s, 0);
+
         // Add all completed planks
-        this.data[today].push(...planksToLog);
+        this.data[today].push(...this.completedPlanks);
         this.saveData();
 
         const total = this.getTotalSeconds(this.data[today]);
-        this.showTimerMessage(`✅ ${planksToLog.length} plank${planksToLog.length > 1 ? 's' : ''} logged! (Total today: ${total}s)`, 'success');
+        this.showTimerMessage(`✅ ${this.completedPlanks.length} plank${this.completedPlanks.length > 1 ? 's' : ''} logged! (Total today: ${total}s)`, 'success');
 
         // Refresh UI
         this.renderProgressGrid();
         this.updateStats();
         this.checkTodayStatus();
+        this.checkUseLifeEligibility();
 
         // Reset completed planks
         this.completedPlanks = [];
@@ -888,6 +1293,69 @@ class PlankClub {
         }
     }
 
+    playMilestoneSound() {
+        // Play a double-beep for milestone (30s, 40s, 50s, etc.)
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // First beep
+            const osc1 = this.audioContext.createOscillator();
+            const gain1 = this.audioContext.createGain();
+            osc1.connect(gain1);
+            gain1.connect(this.audioContext.destination);
+            osc1.frequency.value = 600;
+            osc1.type = 'sine';
+            gain1.gain.setValueAtTime(0.25, this.audioContext.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+            osc1.start(this.audioContext.currentTime);
+            osc1.stop(this.audioContext.currentTime + 0.15);
+
+            // Second beep (slightly higher)
+            const osc2 = this.audioContext.createOscillator();
+            const gain2 = this.audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(this.audioContext.destination);
+            osc2.frequency.value = 700;
+            osc2.type = 'sine';
+            gain2.gain.setValueAtTime(0.25, this.audioContext.currentTime + 0.2);
+            gain2.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.35);
+            osc2.start(this.audioContext.currentTime + 0.2);
+            osc2.stop(this.audioContext.currentTime + 0.35);
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
+    playCelebrationSound() {
+        // Play ascending celebration tones for beating personal best
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const frequencies = [523, 659, 784, 1047]; // C5, E5, G5, C6
+            const duration = 0.15;
+
+            frequencies.forEach((freq, i) => {
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                const startTime = this.audioContext.currentTime + (i * 0.12);
+                gain.gain.setValueAtTime(0.3, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            });
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+
     // Wake Lock methods
     async requestWakeLock() {
         try {
@@ -945,6 +1413,15 @@ class PlankClub {
         document.getElementById('settingsModal').style.display = 'none';
     }
 
+    saveMiniSharePreference() {
+        const count = parseInt(document.getElementById('timerCount').value) || 3;
+        const duration = parseInt(document.getElementById('timerDuration').value) || 60;
+        const rest = parseInt(document.getElementById('restDuration').value) || 30;
+        const failureMode = document.getElementById('failureMode').checked;
+        const miniShare = document.getElementById('miniShare').checked;
+        this.saveTimerPreferences(count, duration, rest, failureMode, miniShare);
+    }
+
     promptClearStats() {
         const days = parseInt(document.getElementById('clearDays').value);
 
@@ -960,7 +1437,7 @@ class PlankClub {
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = this.formatDateAsKey(date);
+            const dateStr = date.toISOString().split('T')[0];
             if (this.data[dateStr] && this.data[dateStr].length > 0) {
                 affectedDays++;
             }
@@ -988,7 +1465,7 @@ class PlankClub {
         for (let i = 0; i < days; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = this.formatDateAsKey(date);
+            const dateStr = date.toISOString().split('T')[0];
             if (this.data[dateStr]) {
                 delete this.data[dateStr];
                 clearedDays++;
@@ -1010,11 +1487,6 @@ class PlankClub {
     closeConfirmModal() {
         document.getElementById('confirmModal').style.display = 'none';
     }
-}
-
-// Export PlankClub for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PlankClub;
 }
 
 // Initialize the app when DOM is ready
