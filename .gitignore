@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# IDE (but allow .vscode/settings.json for team collaboration)
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Build output (if ever needed)
+dist/
+build/
+
+# Husky internal directory (auto-managed)
+.husky/_/
+
+# Claude Code local settings
+.claude/settings.local.json
