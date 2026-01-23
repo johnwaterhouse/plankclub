@@ -27,9 +27,9 @@ Track and share your daily plank exercises with friends, Wordle-style!
 - 📈 Stats: current streak, best streak, planks by category
 
 ### Lives System
-- ❤️ Earn 1 life for every 10 planks completed
+- ❤️ Earn 1 life for every 50 planks completed
 - Use lives to fill missed days and preserve your streak
-- Auto-notification when eligible to use a life
+- Auto-notification when eligible to use a life (yesterday must be missed)
 - Lives displayed in stats (Available/Used)
 
 ### Sharing
