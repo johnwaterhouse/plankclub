@@ -732,14 +732,13 @@ class PlankClub {
         // Normal format (without link)
         let shareText = '💪 Plank Club\n';
 
-        // Add milestone banner if applicable
+        // Add milestone banner if applicable - combined with week line for compactness
         if (milestone) {
             const icon = CONFIG.MILESTONE_ICONS[milestone];
-            const name = CONFIG.MILESTONE_NAMES[milestone];
-            shareText += `${icon} ${milestone} DAY STREAK - ${name.toUpperCase()}! ${icon}\n`;
+            shareText += `${icon} Week ${weekNumber} ${weekYear} - ${milestone} Day Streak! ${icon}\n\n`;
+        } else {
+            shareText += `Week ${weekNumber} ${weekYear}\n\n`;
         }
-
-        shareText += `Week ${weekNumber} ${weekYear}\n\n`;
         shareText += grid;
         shareText += '\n\n';
 
