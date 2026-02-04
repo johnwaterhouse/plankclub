@@ -507,6 +507,30 @@ class PlankClub {
         return streak;
     }
 
+    // Calculate lives used in current streak
+    getLivesUsedInCurrentStreak() {
+        let livesCount = 0;
+        let date = new Date();
+
+        while (true) {
+            const dateStr = date.toISOString().split('T')[0];
+            const dateData = this.data[dateStr];
+            const hasPlank = dateData && Array.isArray(dateData) && dateData.length > 0 && this.getTotalSeconds(dateData) > 0;
+            const hasLife = this.hasLifeUsed(dateStr);
+
+            if (hasPlank || hasLife) {
+                if (hasLife) {
+                    livesCount++;
+                }
+                date.setDate(date.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+
+        return livesCount;
+    }
+
     // Calculate max streak (accounting for lives used)
     calculateMaxStreak() {
         // Get all dates (both with planks and with lives)
@@ -668,7 +692,7 @@ class PlankClub {
 
         // Calculate streak first (needed for star badge)
         const currentStreak = this.calculateCurrentStreak();
-        const livesUsed = this.getUsedLivesCount();
+        const livesUsed = this.getLivesUsedInCurrentStreak();
 
         // Check for milestone
         let milestone = null;
@@ -731,7 +755,7 @@ class PlankClub {
         // Add lives info to streak if any used
         let streakText = `🔥 Streak: ${currentStreak}`;
         if (livesUsed > 0) {
-            streakText += ` (${livesUsed} life${livesUsed > 1 ? 'ves' : ''} used ❤️)`;
+            streakText += ` (${livesUsed} ${livesUsed > 1 ? 'lives' : 'life'} used ❤️)`;
         }
         shareText += `${streakText} | Total Planks: ${totalPlanks}`;
 
