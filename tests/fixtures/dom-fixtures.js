@@ -4,7 +4,7 @@
 
 export function createMinimalDOM() {
   document.body.innerHTML = `
-    <div class="container">
+    <div class="container" data-view="setup">
       <section class="timer-section">
         <div class="timer-setup">
           <div class="timer-input-group timer-input-full">
@@ -18,6 +18,11 @@ export function createMinimalDOM() {
               <input id="restDuration" type="number" min="5" max="180" value="30">
             </div>
           </div>
+          <div class="timer-toggle-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="failureMode">
+            </label>
+          </div>
         </div>
         <div class="timer-display">
           <div id="timerStartTime"></div>
@@ -27,6 +32,7 @@ export function createMinimalDOM() {
         </div>
         <div class="timer-controls">
           <button id="startTimerBtn">▶️ Start Timer</button>
+          <button id="doneTimerBtn" style="display: none;">✓ Done</button>
           <button id="pauseTimerBtn" style="display: none;">⏸️ Pause</button>
           <button id="stopTimerBtn" style="display: none;">⏹️ Stop</button>
         </div>
@@ -35,11 +41,14 @@ export function createMinimalDOM() {
 
       <section class="today-section">
         <div class="input-group">
-          <input id="plankTime" type="number" placeholder="Seconds" min="0" max="999">
+          <input id="plankTime" type="number" placeholder="Seconds" min="0" max="999" value="60">
           <input id="plankCount" type="number" placeholder="Count" min="1" max="99" value="1">
           <button id="submitBtn">Log Plank</button>
         </div>
         <div id="todayStatus" class="status-message"></div>
+        <div id="useLifeNotification" style="display: none;">
+          <button id="useLifeBtn">❤️ Use Life</button>
+        </div>
       </section>
 
       <section class="progress-section">
@@ -65,15 +74,28 @@ export function createMinimalDOM() {
           </div>
           <div class="stat-card stat-card-intermediate">
             <div class="stat-value" id="intermediateCount">0</div>
-            <div class="stat-label">🟩 Intermediate (30-60s)</div>
+            <div class="stat-label">🟢 Intermediate (30-60s)</div>
           </div>
           <div class="stat-card stat-card-advanced">
             <div class="stat-value" id="advancedCount">0</div>
-            <div class="stat-label">🟢 Advanced (60s+)</div>
+            <div class="stat-label">💪 Advanced (60-90s)</div>
+          </div>
+          <div class="stat-card stat-card-elite">
+            <div class="stat-value" id="eliteCount">0</div>
+            <div class="stat-label">🔥 Elite (90-120s)</div>
+          </div>
+          <div class="stat-card stat-card-champion">
+            <div class="stat-value" id="championCount">0</div>
+            <div class="stat-label">🏆 Champion (120s+)</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="totalPlanks">0</div>
             <div class="stat-label">Total Planks</div>
+          </div>
+          <div class="stat-card stat-card-lives">
+            <div class="stat-value" id="livesRemaining">0</div>
+            <div class="stat-label">❤️ Lives Available</div>
+            <div class="stat-sublabel" id="livesInfo">0/0 used</div>
           </div>
         </div>
       </section>
@@ -91,12 +113,14 @@ export function createMinimalDOM() {
       <div class="modal-content">
         <h2>Settings</h2>
         <div class="settings-option">
-          <h3>Clear Stats</h3>
-          <p class="option-description">Remove plank data from your history</p>
+          <label class="checkbox-label">
+            <input type="checkbox" id="miniShare">
+            Mini Share
+          </label>
+        </div>
+        <div class="settings-option">
           <div class="clear-stats-controls">
-            <label for="clearDays">Clear last:</label>
             <input id="clearDays" type="number" min="1" max="365" value="7">
-            <span>days</span>
           </div>
           <button id="clearStatsBtn">Clear Data</button>
         </div>
@@ -106,7 +130,6 @@ export function createMinimalDOM() {
 
     <div id="confirmModal" class="modal" style="display: none;">
       <div class="modal-content">
-        <h2>Confirm Clear Data</h2>
         <p id="confirmMessage" class="confirm-message"></p>
         <div class="modal-actions">
           <button id="confirmYesBtn">Yes, Clear Data</button>

@@ -42,7 +42,7 @@ const CONFIG = {
     PLANKS_PER_LIFE: 50         // Number of planks needed to earn one life
 };
 
-class PlankClub {
+export default class PlankClub {
     constructor() {
         this.storageKey = 'plankClubData';
         this.livesKey = 'plankClubLives';
@@ -103,14 +103,19 @@ class PlankClub {
     loadData() {
         const stored = localStorage.getItem(this.storageKey);
         if (stored) {
-            const data = JSON.parse(stored);
-            // Migrate old format (single number) to new format (array)
-            for (const date in data) {
-                if (typeof data[date] === 'number') {
-                    data[date] = [data[date]];
+            try {
+                const data = JSON.parse(stored);
+                // Migrate old format (single number) to new format (array)
+                for (const date in data) {
+                    if (typeof data[date] === 'number') {
+                        data[date] = [data[date]];
+                    }
                 }
+                return data;
+            } catch (e) {
+                console.error('Failed to parse stored data, resetting:', e);
+                return {};
             }
-            return data;
         }
         return {};
     }
@@ -690,9 +695,12 @@ class PlankClub {
         const weekNumber = this.getISOWeek(todayDate);
         const weekYear = this.getISOWeekYear(todayDate);
 
-        // Calculate streak first (needed for star badge)
+        // Calculate streak first (needed for star badge and century crown)
         const currentStreak = this.calculateCurrentStreak();
+        const maxStreak = this.calculateMaxStreak();
+        const hasCenturyClub = maxStreak >= 100;
         const livesUsed = this.getLivesUsedInCurrentStreak();
+        const clubHeader = hasCenturyClub ? '👑 Plank Club' : '💪 Plank Club';
 
         // Check for milestone
         let milestone = null;
@@ -726,11 +734,11 @@ class PlankClub {
             if (livesUsed > 0) {
                 streakText += ` (${livesUsed} ❤️)`;
             }
-            return `💪 Plank Club W${weekNumber}\n${grid}\n🔥 ${streakText} | ${totalPlanks} total`;
+            return `${clubHeader} W${weekNumber}\n${grid}\n🔥 ${streakText} | ${totalPlanks} total`;
         }
 
         // Normal format (without link)
-        let shareText = '💪 Plank Club\n';
+        let shareText = `${clubHeader}\n`;
 
         // Add milestone banner if applicable
         if (milestone) {

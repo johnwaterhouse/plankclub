@@ -25,6 +25,12 @@ Track and share your daily plank exercises with friends, Wordle-style!
   - 🏆 Champion (120+ seconds)
   - ❤️ Life used (streak preserved)
 - 📈 Stats: current streak, best streak, planks by category
+- 🏅 Streak milestone badges in shares:
+  - ⭐ Stars replace colour blocks at 14+ day streak
+  - 🔥 Three-Week Legend (21 days)
+  - 💎 Month Master (30 days)
+  - 🏅 Two-Month Hero (60 days)
+  - 👑 Century Club (100 days) — crown permanently shown in all future shares
 
 ### Lives System
 - ❤️ Earn 1 life for every 50 planks completed
@@ -70,6 +76,22 @@ Week 47 2025
 
 📅 Today: 3 planks (180s)
 🔥 Streak: 5 | Total Planks: 42
+
+Join me at Plank Club!
+https://pcjohn.co.uk
+```
+
+With a milestone badge (30+ day streak):
+
+```
+💪 Plank Club
+💎 30 DAY STREAK - MONTH MASTER! 💎
+Week 47 2025
+
+⭐⭐⭐⭐⭐⭐⭐
+
+📅 Today: 3 planks (180s)
+🔥 Streak: 30 | Total Planks: 124
 
 Join me at Plank Club!
 https://pcjohn.co.uk
