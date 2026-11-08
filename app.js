@@ -335,7 +335,7 @@ export default class PlankClub {
         document.getElementById('useLifeBtn').addEventListener('click', () => this.handleUseLife());
 
         // Timer event listeners
-        document.getElementById('startTimerBtn').addEventListener('click', () => this.startTimer());
+        document.getElementById('startTimerBtn').addEventListener('click', () => { void this.startTimer(); });
         document.getElementById('doneTimerBtn').addEventListener('click', () => this.completePlank());
         document.getElementById('pauseTimerBtn').addEventListener('click', () => this.pauseTimer());
         document.getElementById('stopTimerBtn').addEventListener('click', () => this.stopTimer());
@@ -1074,7 +1074,7 @@ export default class PlankClub {
         this.startTime = null;
 
         // Release wake lock
-        this.releaseWakeLock();
+        void this.releaseWakeLock();
 
         // Re-enable inputs
         document.getElementById('timerCount').disabled = false;
