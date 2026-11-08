@@ -1,6 +1,10 @@
 // Plank Club - Exercise Tracking App
 // All data stored in localStorage
 
+// Initialize Vercel Web Analytics
+import { inject } from '@vercel/analytics';
+inject();
+
 // Configuration constants
 const CONFIG = {
     DISPLAY_DAYS: 28,           // Days to show in progress grid
